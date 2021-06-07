@@ -1,0 +1,13 @@
+version: '3'
+
+volumes:
+    deps:
+
+services:
+    plugin:
+        image: node:14.17
+        volumes:
+            - .:/usr/src/app
+            - deps:/usr/src/app/node_modules
+        working_dir: /usr/src/app
+        command: bash -c "npm run test && npm run build"

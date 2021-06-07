@@ -1,0 +1,126 @@
+name: ci
+
+on:
+    push:
+        branches:
+            - 'main'
+    pull_request:
+        types:
+            - opened
+            - synchronize
+            - reopened
+
+env:
+    NODE_VERSION: 14.17
+
+jobs:
+    deps:
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+        -
+            uses: actions/checkout@v2
+            with:
+                persist-credentials: false
+        -
+            name: Use Node.js ${{ env.NODE_VERSION }}
+            uses: actions/setup-node@v1
+            with:
+                node-version: ${{ env.NODE_VERSION }}
+        -
+            name: Cache npm dependencies
+            id: load-cache
+            uses: actions/cache@v2
+            with:
+                key: npm-${{ hashFiles('package-lock.json') }}
+                path: node_modules
+        -
+            name: Cache npm cache
+            uses: actions/cache@v2
+            if: steps.load-cache.outputs.cache-hit != 'true'
+            with:
+                key: npm-cache-${{ hashFiles('package-lock.json') }}
+                path: ~/.npm
+                restore-keys: |
+                    npm-cache-
+        -
+            name: Install dependencies
+            if: steps.load-cache.outputs.cache-hit != 'true'
+            run: |
+                npm ci
+
+    prettier:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        needs: deps
+        steps:
+        -
+            uses: actions/checkout@v2
+        -
+            name: Use Node.js ${{ env.NODE_VERSION }}
+            uses: actions/setup-node@v1
+            with:
+                node-version: ${{ env.NODE_VERSION }}
+        -
+            name: Cache npm dependencies
+            uses: actions/cache@v2
+            with:
+                key: npm-${{ hashFiles('package-lock.json') }}
+                path: node_modules
+        -
+            name: Prettier
+            run: npm run prettier:check
+            env:
+                CI: true
+
+    lint:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        needs: deps
+        steps:
+        -
+            uses: actions/checkout@v2
+        -
+            name: Use Node.js ${{ env.NODE_VERSION }}
+            uses: actions/setup-node@v1
+            with:
+                node-version: ${{ env.NODE_VERSION }}
+        -
+            name: Cache npm dependencies
+            uses: actions/cache@v2
+            with:
+                key: npm-${{ hashFiles('package-lock.json') }}
+                path: node_modules
+        -
+            name: Lint
+            run: npm run lint:check
+            env:
+                CI: true
+
+    unit-tests:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 3
+        needs: deps
+        steps:
+        -
+            uses: actions/checkout@v2
+        -
+            name: Use Node.js ${{ env.NODE_VERSION }}
+            uses: actions/setup-node@v1
+            with:
+                node-version: ${{ env.NODE_VERSION }}
+        -
+            name: Cache npm dependencies
+            uses: actions/cache@v2
+            with:
+                key: npm-${{ hashFiles('package-lock.json') }}
+                path: node_modules
+        -
+            name: Test
+            run: npm run test
+            env:
+                CI: true
+
