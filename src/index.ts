@@ -9,12 +9,12 @@ import { VPAIDParser } from './vpaid';
 export default function register(vjs: typeof videojs = videojs) {
     const vjsPlugin = vjs.getPlugin('plugin');
 
-    class Plugin extends vjsPlugin implements PrebidOutStreamPlugin.Instance {
+    const Plugin = class Plugin extends vjsPlugin implements PrebidOutStreamPlugin.Instance {
         player: VideoJsPlayer;
         options?: PrebidOutStreamPlugin.Options;
 
         constructor(player: VideoJsPlayer, options?: PrebidOutStreamPlugin.Options) {
-            super(player);
+            super(player, options);
 
             this.player = player;
             this.options = options;
@@ -72,7 +72,7 @@ export default function register(vjs: typeof videojs = videojs) {
 
             // Play all ads up until max duration
         }
-    }
+    };
 
     vjs.registerPlugin('outstream', Plugin);
 }

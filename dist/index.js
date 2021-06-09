@@ -1261,9 +1261,9 @@ var VPAIDParser = class {
 // src/index.ts
 function register(vjs = import_video.default) {
   const vjsPlugin = vjs.getPlugin("plugin");
-  class Plugin extends vjsPlugin {
+  const Plugin = class Plugin extends vjsPlugin {
     constructor(player, options) {
-      super(player);
+      super(player, options);
       __publicField(this, "player");
       __publicField(this, "options");
       __publicField(this, "parse", () => __async(this, null, function* () {
@@ -1308,7 +1308,7 @@ function register(vjs = import_video.default) {
         this.player.src(source);
       }
     }
-  }
+  };
   vjs.registerPlugin("outstream", Plugin);
 }
 //# sourceMappingURL=index.js.map
