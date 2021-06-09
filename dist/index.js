@@ -1175,7 +1175,6 @@ var require_vast_client_min = __commonJS({
 // src/index.ts
 __markAsModule(exports);
 __export(exports, {
-  Plugin: () => Plugin,
   default: () => register
 });
 var import_video = __toModule(require("video.js"));
@@ -1260,55 +1259,56 @@ var VPAIDParser = class {
 };
 
 // src/index.ts
-var Plugin = class extends import_video.default.Plugin {
-  constructor(player, options) {
-    super(player);
-    __publicField(this, "player");
-    __publicField(this, "options");
-    __publicField(this, "parse", () => __async(this, null, function* () {
-      var _a, _b;
-      const vp = new import_vast_client.VASTParser();
-      try {
-        if ((_a = this.options) == null ? void 0 : _a.adTagUrl) {
-          const response = yield vp.getAndParseVAST(this.options.adTagUrl, this.options);
-          this.display(response);
+function register(vjs = import_video.default) {
+  const vjsPlugin = vjs.getPlugin("plugin");
+  class Plugin extends vjsPlugin {
+    constructor(player, options) {
+      super(player);
+      __publicField(this, "player");
+      __publicField(this, "options");
+      __publicField(this, "parse", () => __async(this, null, function* () {
+        var _a, _b;
+        const vp = new import_vast_client.VASTParser();
+        try {
+          if ((_a = this.options) == null ? void 0 : _a.adTagUrl) {
+            const response = yield vp.getAndParseVAST(this.options.adTagUrl, this.options);
+            this.display(response);
+          }
+          if ((_b = this.options) == null ? void 0 : _b.adXml) {
+            const xmlParser = new DOMParser();
+            const doc = xmlParser.parseFromString(this.options.adXml, "text/xml");
+            const response = yield vp.parseVAST(doc, this.options);
+            this.display(response);
+          }
+        } catch (e) {
+          this.trigger("outstream.error", e);
         }
-        if ((_b = this.options) == null ? void 0 : _b.adXml) {
-          const xmlParser = new DOMParser();
-          const doc = xmlParser.parseFromString(this.options.adXml, "text/xml");
-          const response = yield vp.parseVAST(doc, this.options);
-          this.display(response);
+      }));
+      this.player = player;
+      this.options = options;
+      this.parse();
+    }
+    isLinearCreative(creative) {
+      return (creative == null ? void 0 : creative.mediaFiles) !== void 0;
+    }
+    display(response) {
+      var _a, _b, _c;
+      const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b[0];
+      if (!this.isLinearCreative(creative)) {
+        return;
+      }
+      if (creative.apiFramework === "VPAID") {
+        if ((_c = this.options) == null ? void 0 : _c.useVPAID) {
+          const parser = new VPAIDParser(creative);
+          parser.inject(this.player.el());
         }
-      } catch (e) {
-        this.trigger("outstream.error", e);
+      } else {
+        const source = this.player.selectSource(creative.mediaFiles);
+        this.player.preload(true);
+        this.player.src(source);
       }
-    }));
-    this.player = player;
-    this.options = options;
-    this.parse();
-  }
-  isLinearCreative(creative) {
-    return (creative == null ? void 0 : creative.mediaFiles) !== void 0;
-  }
-  display(response) {
-    var _a, _b, _c;
-    const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b[0];
-    if (!this.isLinearCreative(creative)) {
-      return;
-    }
-    if (creative.apiFramework === "VPAID") {
-      if ((_c = this.options) == null ? void 0 : _c.useVPAID) {
-        const parser = new VPAIDParser(creative);
-        parser.inject(this.player.el());
-      }
-    } else {
-      const source = this.player.selectSource(creative.mediaFiles);
-      this.player.preload(true);
-      this.player.src(source);
     }
   }
-};
-function register(vjs) {
   vjs.registerPlugin("outstream", Plugin);
 }
 //# sourceMappingURL=index.js.map
