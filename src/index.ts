@@ -1,65 +1,77 @@
 import videojs, { VideoJsPlayer } from 'video.js';
+import { VASTParser, VastResponse, VastCreativeLinear } from 'vast-client';
+import { VPAIDParser } from './vpaid';
 
-const Button = videojs.getComponent('button');
+// TODO
+// Add logger for debug option
+// When destroyed, clear all listeners on window
+// When destroyed, clear vpaid container
 
-// implement our Button
-export class VideoJsExampleButton extends Button {
-    static defaultOptions: VideoJsExamplePluginOptions = {
-        label: 'Default Label',
-        message: 'Default Message',
+export class Plugin extends videojs.Plugin implements PrebidOutStreamPlugin.Instance {
+    player: VideoJsPlayer;
+    options?: PrebidOutStreamPlugin.Options;
+
+    constructor(player: VideoJsPlayer, options?: PrebidOutStreamPlugin.Options) {
+        super(player);
+
+        this.player = player;
+        this.options = options;
+
+        this.parse();
+    }
+
+    parse = async () => {
+        const vp = new VASTParser();
+
+        try {
+            if (this.options?.adTagUrl) {
+                const response = await vp.getAndParseVAST(this.options.adTagUrl, this.options);
+                this.display(response);
+            }
+
+            if (this.options?.adXml) {
+                // Needs try catch block to catch parser errors
+                const xmlParser = new DOMParser();
+                const doc = xmlParser.parseFromString(this.options.adXml, 'text/xml');
+                const response = await vp.parseVAST(doc, this.options);
+                this.display(response);
+            }
+        } catch (e) {
+            // Ad error
+            this.trigger('outstream.error', e);
+        }
     };
 
-    private exampleOptions: VideoJsExamplePluginOptions;
-
-    constructor(player: VideoJsPlayer, exampleOptions: Partial<VideoJsExamplePluginOptions> = {}) {
-        super(player);
-
-        this.exampleOptions = {
-            ...VideoJsExampleButton.defaultOptions,
-            ...exampleOptions,
-        };
-
-        this.el().innerHTML = this.exampleOptions.label;
+    isLinearCreative(creative: any): creative is VastCreativeLinear {
+        return creative?.mediaFiles !== undefined;
     }
 
-    createEl(tag = 'button', props = {}, attributes = {}) {
-        const el = super.createEl(tag, props, attributes);
-        return el;
-    }
+    display(response: VastResponse) {
+        const creative = response.ads?.[0].creatives?.[0];
+        if (!this.isLinearCreative(creative)) {
+            // non linear creative
+            return;
+        }
 
-    handleClick() {
-        alert(this.exampleOptions.message);
-    }
-}
+        if (creative.apiFramework === 'VPAID') {
+            if (this.options?.useVPAID) {
+                // Resolve VPAID
+                const parser = new VPAIDParser(creative);
+                parser.inject(this.player.el());
+            }
+        } else {
+            // Resolve vast
+            const source = this.player.selectSource(creative.mediaFiles);
+            this.player.preload(true);
+            this.player.src(source);
 
-videojs.registerComponent('exampleButton', VideoJsExampleButton);
+            // Autoplay
+        }
 
-const Plugin = videojs.getPlugin('plugin');
-
-// implement the plugin that adds the button the the controlBar
-export class VideoJsExamplePlugin extends Plugin {
-    constructor(player: VideoJsPlayer, options?: VideoJsExamplePluginOptions) {
-        super(player);
-        player.ready(() => {
-            player.controlBar.addChild('exampleButton', options);
-        });
+        // Play all ads up until max duration
     }
 }
 
-videojs.registerPlugin('examplePlugin', VideoJsExamplePlugin);
-
-declare module 'video.js' {
-    // tell the type system our plugin method exists...
-    export interface VideoJsPlayer {
-        examplePlugin: (options?: Partial<VideoJsExamplePluginOptions>) => VideoJsExamplePlugin;
-    }
-    // tell the type system our plugin options exist...
-    export interface VideoJsPlayerPluginOptions {
-        examplePlugin?: Partial<VideoJsExamplePluginOptions>;
-    }
-}
-
-export interface VideoJsExamplePluginOptions {
-    label: string;
-    message: string;
+export function register(vjs: typeof videojs) {
+    vjs.registerPlugin('outstream', Plugin);
 }

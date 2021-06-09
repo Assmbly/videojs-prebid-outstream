@@ -1,7 +1,7 @@
 module.exports = {
     root: true,
     env: {
-        node: true,
+        es2020: true,
     },
     parser: '@typescript-eslint/parser',
     parserOptions: {
@@ -15,11 +15,6 @@ module.exports = {
         'prettier/@typescript-eslint',
         'plugin:prettier/recommended',
     ],
-    settings: {
-        react: {
-            version: 'detect',
-        },
-    },
     rules: {
         'array-bracket-spacing': ['error', 'never'],
         curly: 'off',

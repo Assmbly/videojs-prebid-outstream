@@ -5,14 +5,14 @@
 -   [docker compose](https://docs.docker.com/compose/install/)
 
 1. Copy `docker-compose.override.example.yml` into `docker-compose.override.yml` and adjust overrides as required.
-2. Run `npm ci` (this step is optional, but will provide types if your editor does not automatically resolve type defs.)
+2. Run `docker-compose run --rm plugin npm ci` (this step is optional, but will provide types if your editor does not automatically resolve type defs.)
 3. Run `docker-compose up`
 
 ## Plugin
 
 ### Build
 ```
-npm run build
+docker-compose run --rm plugin npm run build
 ```
 
 ### Release
@@ -21,10 +21,10 @@ Excerpt about how to release
 
 ### Test
 ```
-npm run test
+docker-compose run --rm plugin npm run test
 ```
 
 ### Linting
 ```
-npm run lint
+docker-compose run --rm plugin npm run lint
 ```
