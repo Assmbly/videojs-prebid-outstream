@@ -1,25 +1,23 @@
-import 'video.js';
-
-declare module 'video.js' {
-    // tell the type system our plugin method exists...
-    export interface VideoJsPlayer {
-        outstream: (options?: Partial<PrebidOutstreamPluginOptions>) => PrebidOutstreamPlugin;
+declare namespace PrebidOutStreamPlugin {
+    export type Instance = import('@types/video.js').Plugin & PluginInstance;
+    interface PluginInstance {
+        parse: () => Promise<void>;
     }
-    // tell the type system our plugin options exist...
-    export interface VideoJsPlayerPluginOptions {
-        outstream?: Partial<PrebidOutstreamPluginOptions>;
+
+    export type Options = import('@types/vast-client').VastRequestOptions & PluginOptions;
+    interface PluginOptions {
+        adTagUrl: string;
+        adXml: string;
+        debug: boolean;
+        useVPAID: boolean;
     }
 }
 
-export type PrebidOutstreamPlugin = import('video.js').Plugin & _PrebidOutstreamPlugin;
-
-interface _PrebidOutstreamPlugin {
-    write: () => void;
-}
-
-export type PrebidOutstreamPluginOptions = import('vast-client').VastRequestOptions & _PrebidOutstreamPluginOptions;
-
-interface _PrebidOutstreamPluginOptions {
-    adTagUrl: string;
-    adXml: string;
-}
+//VastRequestOptions
+//     timeout?: number; default 0
+//     withCredentials?: boolean; default false
+//     wrapperLimit?: number; default 0
+//     urlHandler?: VASTClientUrlHandler; default undefined
+//     resolveAll?: boolean; default true
+//     allowMultipleAds: boolean
+//     followAdditionalWrappers: boolean

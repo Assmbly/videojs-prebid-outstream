@@ -1,27 +1,77 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VASTParser } from 'vast-client';
+import { VASTParser, VastResponse, VastCreativeLinear } from 'vast-client';
+import { VPAIDParser } from './vpaid';
 
-const VjsPlugin = videojs.getPlugin('plugin');
+// TODO
+// Add logger for debug option
+// When destroyed, clear all listeners on window
+// When destroyed, clear vpaid container
 
-// implement the plugin that adds the button the the controlBar
-export class Plugin extends VjsPlugin implements PrebidOutstreamPlugin {
-    constructor(player: VideoJsPlayer, options?: PrebidOutstreamPluginOptions) {
+export class Plugin extends videojs.Plugin implements PrebidOutStreamPlugin.Instance {
+    player: VideoJsPlayer;
+    options?: PrebidOutStreamPlugin.Options;
+
+    constructor(player: VideoJsPlayer, options?: PrebidOutStreamPlugin.Options) {
         super(player);
 
-        const vp = new VASTParser();
+        this.player = player;
+        this.options = options;
 
-        if (options.adTagUrl) {
-            vp.getAndParseVAST(options.adTagUrl, options);
-        }
-
-        if (options.adXml) {
-            vp.parseVAST(options.adXml, options);
-        }
+        this.parse();
     }
 
-    write() {
-        console.log('writing plugin...');
+    parse = async () => {
+        const vp = new VASTParser();
+
+        try {
+            if (this.options?.adTagUrl) {
+                const response = await vp.getAndParseVAST(this.options.adTagUrl, this.options);
+                this.display(response);
+            }
+
+            if (this.options?.adXml) {
+                // Needs try catch block to catch parser errors
+                const xmlParser = new DOMParser();
+                const doc = xmlParser.parseFromString(this.options.adXml, 'text/xml');
+                const response = await vp.parseVAST(doc, this.options);
+                this.display(response);
+            }
+        } catch (e) {
+            // Ad error
+            this.trigger('outstream.error', e);
+        }
+    };
+
+    isLinearCreative(creative: any): creative is VastCreativeLinear {
+        return creative?.mediaFiles !== undefined;
+    }
+
+    display(response: VastResponse) {
+        const creative = response.ads?.[0].creatives?.[0];
+        if (!this.isLinearCreative(creative)) {
+            // non linear creative
+            return;
+        }
+
+        if (creative.apiFramework === 'VPAID') {
+            if (this.options?.useVPAID) {
+                // Resolve VPAID
+                const parser = new VPAIDParser(creative);
+                parser.inject(this.player.el());
+            }
+        } else {
+            // Resolve vast
+            const source = this.player.selectSource(creative.mediaFiles);
+            this.player.preload(true);
+            this.player.src(source);
+
+            // Autoplay
+        }
+
+        // Play all ads up until max duration
     }
 }
 
-videojs.registerPlugin('outstream', Plugin);
+export function register(vjs: typeof videojs) {
+    vjs.registerPlugin('outstream', Plugin);
+}

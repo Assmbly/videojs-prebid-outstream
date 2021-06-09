@@ -10,10 +10,9 @@
         "esModuleInterop": true,
         "module": "esnext",
         "moduleResolution": "node",
-        "resolveJsonModule": true,
         "isolatedModules": true,
         "typeRoots": ["./node_modules/@types", "./@types"]
     },
-    "include": ["src/**/*.ts"],
+    "include": ["**/*.ts"],
     "exclude": ["node_modules", "./__mocks__"]
 }

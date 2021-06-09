@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<VAST version="3.0">
+    <Ad id="97517771">
+        <InLine>
+            <AdSystem>adnxs</AdSystem>
+            <AdTitle>
+                <![CDATA[Prebid Video Skippable -- Avocados From Mexico]]>
+            </AdTitle>
+            <Error>
+                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=4&error_code=[ERRORCODE]]]>
+            </Error>
+            <Impression id="adnxs">
+                <![CDATA[https://lax1-ib.adnxs.com/it?an_audit=0&referrer=http%3A%2F%2Ffacty.local%3A3000%2Flifestyle%2Ffitness%2Fbuild-core-strength-with-the-russian-twist%2F%3FplayerDebugLevel%3D5%26adpstp%3Dtrue&e=wqT_3QLpCqBpBQAAAwDWAAUBCNup_4UGEJ3z3PzciYTOCBiLvcn5hpbC5S4qNgkAAAECCCRAEQEHEAAAJEAZEQkAIREJACkRCQAxEQmoMIHSpwY47UhA7UhIAlDLgcAuWJzxW2AAaOWljwF4zs4FgAEBigEDVVNEkgUG8F6YAQGgAQGoAQGwAQC4AQPAAQPIAQLQAQDYAQDgAQDwAQD6AQhvdXQtdGVzdIoCO3VmKCdhJywgMjUyOTg4NSwgMTYyMzE4NDYwMyk7dWYoJ3InLCA5NzUxNzc3MSwgMR0e8PWSAuEDIU4wd0NSUWpZLUx3S0VNdUJ3QzRZQUNDYzhWc3dBRGdBUUFSSTdVaFFnZEtuQmxnQVlQc0RhQUJ3QW5peVdJQUJBb2dCc2xpUUFRQ1lBUUNnQVFHb0FRT3dBUUM1QWZPdGFxUUFBQ1JBd1FIenJXcWtBQUFrUU1rQmdhMWpKM0lxOWpfWkFRQUFBQUFBQVBBXzRBRUE5UUVBQUFBQW1BSUFvQUlBdFFJQUFBQUF2UUlBQUFBQTRBSUE2QUlBLUFJQWdBTUJtQU1CdWdNSlRFRllNVG8xTURjMDRBUFVLNGdFQUpBRUFKZ0VBY0VFQUFBQUEFaghESkIFCAkBGDJBUUE4UVEJDQEBHElnRjBpZXBCERMUUEFfc1FVARoJAQhNRUYJCQEBBERKFSgMQUFBMC4oAAROay4oALBnQmNDRVBmQUZuTVBmQXZnRjNiU2FBWUlHQTFWVFJJZ0dBSkFHQVpnR0FLRUcBTAEBLEpFQ29CZ0d5QmlRSgEQDQEAUg0IAQEAWgEFDQEAaA0ITEFBQUM0QmdvLpoCiQEhUVE4aEZ3NuUBJG5QRmJJQVFvQUQpbQBBIZkkRG9KVEVGWU1UbyVFEFFOUXJTPQUAVREMDEFBQVcdDABZHQwAYR0MAGMdDPBJZUFBLsICOGh0dHA6Ly9wcmViaWQub3JnL2Rldi1kb2NzL3Nob3ctb3V0c3RyZWFtLXZpZGVvLWFkcy5odG1s2AIA4AKtmEjqAnQNQ_CfZmFjdHkubG9jYWw6MzAwMC9saWZlc3R5bGUvZml0bmVzcy9idWlsZC1jb3JlLXN0cmVuZ3RoLXdpdGgtdGhlLXJ1c3NpYW4tdHdpc3QvP3BsYXllckRlYnVnTGV2ZWw9NSZhZHBzdHA9dHJ1ZYADAIgDAZADAJgDF6ADAaoDAMAD4KgByAMA2AMA4AMA6AMA-AMBgAQAkgQNL3V0L3YzLwnj8F6YBACiBAw3NS4xNTYuMTQuMjioBNAssgQSCAQQBBjgAyCOAigBKAIwADgDuAQAwAQAyAQA0gQOOTMyNSNMQVgxOjUwNzTaBAIIAeAEAPAEy4HALogFAZgFAKAF_____wUDGAHABQDJBQAFARTwP9IFCQkFC3wAAADYBQHgBQHwBcOVC_oFBAgAEACQBgGYBgC4BgDBBgEhMAAA8D_QBvUv2gYWChAJERkBXBAAGADgBgTyBgIIAIAHAYgHAKAHQLoHDwFISBgAIAAwADitBEAAyAfOzgXSBw0VdgE4CNoHBgknMOAHAOoHAggA8AfunEo.&s=c282135dfd07d5671cadc32004ccac6985808847]]>
+            </Impression>
+            <Creatives>
+                <Creative id="70944" adID="97517771">
+                    <Linear skipoffset="00:00:05">
+                        <Duration>00:00:30.000</Duration>
+                        <TrackingEvents>
+                            <Tracking event="start">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=2]]>
+                            </Tracking>
+                            <Tracking event="skip">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=3]]>
+                            </Tracking>
+                            <Tracking event="firstQuartile">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=5]]>
+                            </Tracking>
+                            <Tracking event="midpoint">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=6]]>
+                            </Tracking>
+                            <Tracking event="thirdQuartile">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=7]]>
+                            </Tracking>
+                            <Tracking event="complete">
+                                <![CDATA[https://lax1-ib.adnxs.com/vast_track/v2?info=aAAAAAMArgAFAQnb1L9gAAAAABGdOZfPTRCcCBnb1L9gAAAAACDLgcAuKAAw7Ug47UhA0-hISLuv1AFQgdKnBljDlQtiAkNBaAFwAXgAgAECiAEEkAHgA5gBjgKgAQCoAcuBwC6wAQE.&s=e1317427a74a58984681fdcccca023548dcbb773&event_type=8]]>
+                            </Tracking>
+                        </TrackingEvents>
+                        <VideoClicks>
+                            <ClickThrough>
+                                <![CDATA[http://prebid.org/dev-docs/show-outstream-video-ads.html]]>
+                            </ClickThrough>
+                            <ClickTracking id="adnxs">
+                                <![CDATA[https://lax1-ib.adnxs.com/click?AAAAAAAAJEAAAAAAAAAkQAAAAAAAACRAAAAAAAAAJEAAAAAAAAAkQJ05l89NEJwIi14yb7AIyy7b1L9gAAAAAAHpyQBtJAAAbSQAAAIAAADLANAFnPgWAAAAAABVU0QAVVNEAAEAAQDl0gAAAAABAwMCAAAAAMYAvBWZTgAAAAA./bcr=AAAAAAAA8D8=/cnd=%21QQ8hFwjY-LwKEMuBwC4YnPFbIAQoADEAAAAAAAAkQDoJTEFYMTo1MDc0QNQrSQAAAAAAAPA_UQAAAAAAAAAAWQAAAAAAAAAAYQAAAAAAAAAAaQAAAAAAAAAAcQAAAAAAAAAAeAA./cca=OTMyNSNMQVgxOjUwNzQ=/bn=91982/]]>
+                            </ClickTracking>
+                        </VideoClicks>
+                        <MediaFiles>
+                            <MediaFile id="824647" delivery="progressive" type="video/mp4" width="768" height="432"
+                                scalable="true" bitrate="1700" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_1700k.mp4]]>
+                            </MediaFile>
+                            <MediaFile id="824648" delivery="progressive" type="video/x-flv" width="768" height="432"
+                                scalable="true" bitrate="1100" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_1100k.flv]]>
+                            </MediaFile>
+                            <MediaFile id="824649" delivery="progressive" type="video/mp4" width="768" height="432"
+                                scalable="true" bitrate="1100" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_1100k.mp4]]>
+                            </MediaFile>
+                            <MediaFile id="824650" delivery="progressive" type="video/mp4" width="768" height="432"
+                                scalable="true" bitrate="500" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_500k.mp4]]>
+                            </MediaFile>
+                            <MediaFile id="824651" delivery="progressive" type="video/x-flv" width="768" height="432"
+                                scalable="true" bitrate="500" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_500k.flv]]>
+                            </MediaFile>
+                            <MediaFile id="824652" delivery="progressive" type="video/webm" width="768" height="432"
+                                scalable="true" bitrate="500" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_500k.webm]]>
+                            </MediaFile>
+                            <MediaFile id="824653" delivery="progressive" type="video/webm" width="768" height="432"
+                                scalable="true" bitrate="1500" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7_768_432_1500k.webm]]>
+                            </MediaFile>
+                            <MediaFile id="824654" delivery="progressive" type="video/mp4" width="960" height="540"
+                                scalable="true" bitrate="1775" maintainAspectRatio="true">
+                                <![CDATA[https://vcdn.adnxs.com/p/creative-video/c7/84/47/f8/c78447f8-84f7-400b-aacf-39a87d9e1fb7/c78447f8-84f7-400b-aacf-39a87d9e1fb7.mp4]]>
+                            </MediaFile>
+                        </MediaFiles>
+                    </Linear>
+                </Creative>
+            </Creatives>
+            <Extensions>
+                <Extension type="AdVerifications">
+                    <AdVerifications>
+                        <Verification vendor="appnexus.com-omid">
+                            <JavaScriptResource apiFramework="omid" browserOptional="true">
+                                <![CDATA[https://cdn.adnxs.com/v/video/209/trk.js]]>
+                            </JavaScriptResource>
+                            <VerificationParameters>
+                                <![CDATA[tv=vh2-132&d=1x1&s=3479483&st=0&vctx=4&ts=1623184603&vc=iab;vid_ccr=1&vjs=https%3A%2F%2Fcdn.adnxs.com%2Fv%2Fvideo%2F209%2Ftrk.js&cb=https%3A%2F%2Flax1-ib.adnxs.com%2Fvevent%3Fan_audit%3D0%26referrer%3Dhttp%253A%252F%252Ffacty.local%253A3000%252Flifestyle%252Ffitness%252Fbuild-core-strength-with-the-russian-twist%252F%253FplayerDebugLevel%253D5%2526adpstp%253Dtrue%26e%3DwqT_3QLpCqBpBQAAAwDWAAUBCNup_4UGEJ3z3PzciYTOCBiLvcn5hpbC5S4qNgkAAAECCCRAEQEHEAAAJEAZEQkAIREJACkRCQAxEQmoMIHSpwY47UhA7UhIAlDLgcAuWJzxW2AAaOWljwF4zs4FgAEBigEDVVNEkgUG8F6YAQGgAQGoAQGwAQC4AQPAAQPIAQLQAQDYAQDgAQDwAQD6AQhvdXQtdGVzdIoCO3VmKCdhJywgMjUyOTg4NSwgMTYyMzE4NDYwMyk7dWYoJ3InLCA5NzUxNzc3MSwgMR0e8PWSAuEDIU4wd0NSUWpZLUx3S0VNdUJ3QzRZQUNDYzhWc3dBRGdBUUFSSTdVaFFnZEtuQmxnQVlQc0RhQUJ3QW5peVdJQUJBb2dCc2xpUUFRQ1lBUUNnQVFHb0FRT3dBUUM1QWZPdGFxUUFBQ1JBd1FIenJXcWtBQUFrUU1rQmdhMWpKM0lxOWpfWkFRQUFBQUFBQVBBXzRBRUE5UUVBQUFBQW1BSUFvQUlBdFFJQUFBQUF2UUlBQUFBQTRBSUE2QUlBLUFJQWdBTUJtQU1CdWdNSlRFRllNVG8xTURjMDRBUFVLNGdFQUpBRUFKZ0VBY0VFQUFBQUEFaghESkIFCAkBGDJBUUE4UVEJDQEBHElnRjBpZXBCERMUUEFfc1FVARoJAQhNRUYJCQEBBERKFSgMQUFBMC4oAAROay4oALBnQmNDRVBmQUZuTVBmQXZnRjNiU2FBWUlHQTFWVFJJZ0dBSkFHQVpnR0FLRUcBTAEBLEpFQ29CZ0d5QmlRSgEQDQEAUg0IAQEAWgEFDQEAaA0ITEFBQUM0QmdvLpoCiQEhUVE4aEZ3NuUBJG5QRmJJQVFvQUQpbQBBIZkkRG9KVEVGWU1UbyVFEFFOUXJTPQUAVREMDEFBQVcdDABZHQwAYR0MAGMdDPBJZUFBLsICOGh0dHA6Ly9wcmViaWQub3JnL2Rldi1kb2NzL3Nob3ctb3V0c3RyZWFtLXZpZGVvLWFkcy5odG1s2AIA4AKtmEjqAnQNQ_CfZmFjdHkubG9jYWw6MzAwMC9saWZlc3R5bGUvZml0bmVzcy9idWlsZC1jb3JlLXN0cmVuZ3RoLXdpdGgtdGhlLXJ1c3NpYW4tdHdpc3QvP3BsYXllckRlYnVnTGV2ZWw9NSZhZHBzdHA9dHJ1ZYADAIgDAZADAJgDF6ADAaoDAMAD4KgByAMA2AMA4AMA6AMA-AMBgAQAkgQNL3V0L3YzLwnj8F6YBACiBAw3NS4xNTYuMTQuMjioBNAssgQSCAQQBBjgAyCOAigBKAIwADgDuAQAwAQAyAQA0gQOOTMyNSNMQVgxOjUwNzTaBAIIAeAEAPAEy4HALogFAZgFAKAF_____wUDGAHABQDJBQAFARTwP9IFCQkFC3wAAADYBQHgBQHwBcOVC_oFBAgAEACQBgGYBgC4BgDBBgEhMAAA8D_QBvUv2gYWChAJERkBXBAAGADgBgTyBgIIAIAHAYgHAKAHQLoHDwFISBgAIAAwADitBEAAyAfOzgXSBw0VdgE4CNoHBgknMOAHAOoHAggA8AfunEo.%26s%3Dc282135dfd07d5671cadc32004ccac6985808847&cet=0&cecb=&rdcb=https%3A%2F%2Flax1-ib.adnxs.com%2Frd_log%3Fan_audit%3D0%26referrer%3Dhttp%253A%252F%252Ffacty.local%253A3000%252Flifestyle%252Ffitness%252Fbuild-core-strength-with-the-russian-twist%252F%253FplayerDebugLevel%253D5%2526adpstp%253Dtrue%26e%3DwqT_3QLvDKBvBgAAAwDWAAUBCNup_4UGEJ3z3PzciYTOCBiLvcn5hpbC5S4qNgkAAAECCCRAEQEHEAAAJEAZEQkAIREJACkRCQAxEQmoMIHSpwY47UhA7UhIAlDLgcAuWJzxW2AAaOWljwF4zs4FgAEBigEDVVNEkgUG8F6YAQGgAQGoAQGwAQC4AQPAAQPIAQLQAQDYAQDgAQDwAQD6AQhvdXQtdGVzdIoCO3VmKCdhJywgMjUyOTg4NSwgMTYyMzE4NDYwMyk7dWYoJ3InLCA5NzUxNzc3MSwgMR0e8PWSAuEDIU4wd0NSUWpZLUx3S0VNdUJ3QzRZQUNDYzhWc3dBRGdBUUFSSTdVaFFnZEtuQmxnQVlQc0RhQUJ3QW5peVdJQUJBb2dCc2xpUUFRQ1lBUUNnQVFHb0FRT3dBUUM1QWZPdGFxUUFBQ1JBd1FIenJXcWtBQUFrUU1rQmdhMWpKM0lxOWpfWkFRQUFBQUFBQVBBXzRBRUE5UUVBQUFBQW1BSUFvQUlBdFFJQUFBQUF2UUlBQUFBQTRBSUE2QUlBLUFJQWdBTUJtQU1CdWdNSlRFRllNVG8xTURjMDRBUFVLNGdFQUpBRUFKZ0VBY0VFQUFBQUEFaghESkIFCAkBGDJBUUE4UVEJDQEBHElnRjBpZXBCERMUUEFfc1FVARoJAQhNRUYJCQEBBERKFSgMQUFBMC4oAAROay4oALBnQmNDRVBmQUZuTVBmQXZnRjNiU2FBWUlHQTFWVFJJZ0dBSkFHQVpnR0FLRUcBTAEBLEpFQ29CZ0d5QmlRSgEQDQEAUg0IAQEAWgEFDQEAaA0ITEFBQUM0QmdvLpoCiQEhUVE4aEZ3NuUBJG5QRmJJQVFvQUQpbQBBIZkkRG9KVEVGWU1UbyVFEFFOUXJTPQUAVREMDEFBQVcdDABZHQwAYR0MAGMdDPBJZUFBLsICOGh0dHA6Ly9wcmViaWQub3JnL2Rldi1kb2NzL3Nob3ctb3V0c3RyZWFtLXZpZGVvLWFkcy5odG1s2AIA4AKtmEjqAnQNQ_B5ZmFjdHkubG9jYWw6MzAwMC9saWZlc3R5bGUvZml0bmVzcy9idWlsZC1jb3JlLXN0cmVuZ3RoLXdpdGgtdGhlLXJ1c3NpYW4tdHdpc3QvP3BsYXllckRlYnVnTGV2ZWw9NSZhZHBzdHA9dHJ1ZfICEQoGQURWX0lEEgdtbADyARQMQ1BHXwEUGDU3NTkzODgBFAgFQ1ABEzQIMjE5NzAwMDjyAg0KCAE8GEZSRVESATEFEDRSRU1fVVNFUhIBMPICDAkgFENPREUSAAUPAVcRDxALCgdDUBUOEAkKBUlPAWAEAPIBGgRJTxUaOBMKD0NVU1RPTV9NT0RFTA0kCBoKFjIWABxMRUFGX05BTQVqCB4KGjYdAAhBU1QBPhBJRklFRAFiHA0KCFNQTElUAU3QATCAAwCIAwGQAwCYAxegAwGqAwDAA-CoAcgDANgDAOADAOgDAPgDAYAEAJIEDS91dC92My8p6fBemAQAogQMNzUuMTU2LjE0LjI4qATQLLIEEggEEAQY4AMgjgIoASgCMAA4A7gEAMAEAMgEANIEDjkzMjUjTEFYMTo1MDc02gQCCAHgBADwBMuBwC6IBQGYBQCgBf____8FAxgBwAUAyQUABQEU8D_SBQkJBQt8AAAA2AUB4AUB8AXDlQv6BQQIABAAkAYBmAYAuAYAwQYBITAAAPA_0Ab1L9oGFgoQCREZAVwQABgA4AYE8gYCCACABwGIBwCgB0C6Bw8BSEgYACAAMAA4rQRAAMgHzs4F0gcNFXYBOAjaBwYJJzDgBwDqBwIIAPAH7pxK%26s%3D401e3b08bc4c3241f4ea663dd106db2f311cd6ea&bridge=1.11.0&rblog=auc=620388775051606429;bm=9325;sm=9325;cr=97517771;pl=13232385&vid_context=anoutstream;anbannerstream;anoverlayplayer]]>
+                            </VerificationParameters>
+                        </Verification>
+                    </AdVerifications>
+                </Extension>
+            </Extensions>
+        </InLine>
+    </Ad>
+</VAST>
