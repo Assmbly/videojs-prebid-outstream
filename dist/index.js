@@ -4,6 +4,7 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[Object.keys(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -22,6 +23,30 @@ var __reExport = (target, module2, desc) => {
 };
 var __toModule = (module2) => {
   return __reExport(__markAsModule(__defProp(module2 != null ? __create(__getProtoOf(module2)) : {}, "default", module2 && module2.__esModule && "default" in module2 ? { get: () => module2.default, enumerable: true } : { value: module2, enumerable: true })), module2);
+};
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+var __async = (__this, __arguments, generator) => {
+  return new Promise((resolve, reject) => {
+    var fulfilled = (value) => {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var rejected = (value) => {
+      try {
+        step(generator.throw(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    step((generator = generator.apply(__this, __arguments)).next());
+  });
 };
 
 // node_modules/vast-client/dist/vast-client.min.js
@@ -1236,41 +1261,43 @@ var VPAIDParser = class {
 
 // src/index.ts
 var Plugin = class extends import_video.default.Plugin {
-  player;
-  options;
   constructor(player, options) {
     super(player);
+    __publicField(this, "player");
+    __publicField(this, "options");
+    __publicField(this, "parse", () => __async(this, null, function* () {
+      var _a, _b;
+      const vp = new import_vast_client.VASTParser();
+      try {
+        if ((_a = this.options) == null ? void 0 : _a.adTagUrl) {
+          const response = yield vp.getAndParseVAST(this.options.adTagUrl, this.options);
+          this.display(response);
+        }
+        if ((_b = this.options) == null ? void 0 : _b.adXml) {
+          const xmlParser = new DOMParser();
+          const doc = xmlParser.parseFromString(this.options.adXml, "text/xml");
+          const response = yield vp.parseVAST(doc, this.options);
+          this.display(response);
+        }
+      } catch (e) {
+        this.trigger("outstream.error", e);
+      }
+    }));
     this.player = player;
     this.options = options;
     this.parse();
   }
-  parse = async () => {
-    const vp = new import_vast_client.VASTParser();
-    try {
-      if (this.options?.adTagUrl) {
-        const response = await vp.getAndParseVAST(this.options.adTagUrl, this.options);
-        this.display(response);
-      }
-      if (this.options?.adXml) {
-        const xmlParser = new DOMParser();
-        const doc = xmlParser.parseFromString(this.options.adXml, "text/xml");
-        const response = await vp.parseVAST(doc, this.options);
-        this.display(response);
-      }
-    } catch (e) {
-      this.trigger("outstream.error", e);
-    }
-  };
   isLinearCreative(creative) {
-    return creative?.mediaFiles !== void 0;
+    return (creative == null ? void 0 : creative.mediaFiles) !== void 0;
   }
   display(response) {
-    const creative = response.ads?.[0].creatives?.[0];
+    var _a, _b, _c;
+    const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b[0];
     if (!this.isLinearCreative(creative)) {
       return;
     }
     if (creative.apiFramework === "VPAID") {
-      if (this.options?.useVPAID) {
+      if ((_c = this.options) == null ? void 0 : _c.useVPAID) {
         const parser = new VPAIDParser(creative);
         parser.inject(this.player.el());
       }
