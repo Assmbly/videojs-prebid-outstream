@@ -5,8 +5,9 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "build": "esbuild --sourcemap --bundle --define:process.env.NODE_ENV=\\\"production\\\" --outdir=dist --format=cjs --external:video.js src/index.ts",
-        "build:types": "echo use tsc to build types",
+        "build": "npm run build:bundle && npm run build:types",
+        "build:bundle": "esbuild --sourcemap --bundle --define:process.env.NODE_ENV=\\\"production\\\" --outdir=dist --format=cjs --external:video.js src/index.ts",
+        "build:types": "tsc --build tsconfig.types.json",
         "lint": "npm run prettier && npm run eslint && tsc --noEmit",
         "lint:check": "npm run eslint:check && npm run prettier:check && tsc --noEmit",
         "eslint": "eslint --ext .ts --fix .",
