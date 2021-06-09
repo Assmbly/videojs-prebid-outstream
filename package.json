@@ -6,7 +6,7 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "npm run build:bundle && npm run build:types",
-        "build:bundle": "esbuild --sourcemap --bundle --define:process.env.NODE_ENV=\\\"production\\\" --outdir=dist --format=cjs --external:video.js src/index.ts",
+        "build:bundle": "esbuild --sourcemap --bundle --define:process.env.NODE_ENV=\\\"production\\\" --outdir=dist --format=cjs --external:video.js --target=es2016 src/index.ts",
         "build:types": "tsc --build tsconfig.types.json",
         "lint": "npm run prettier && npm run eslint && tsc --noEmit",
         "lint:check": "npm run eslint:check && npm run prettier:check && tsc --noEmit",

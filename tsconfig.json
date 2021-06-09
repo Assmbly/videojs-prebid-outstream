@@ -16,5 +16,5 @@
         "declaration": true,
     },
     "include": ["**/*.ts"],
-    "exclude": ["node_modules", "**/__tests__", "**/__mocks__", "**/__fixtures__"]
+    "exclude": ["node_modules", "**/__tests__", "**/__mocks__", "**/__fixtures__", "dist"]
 }
