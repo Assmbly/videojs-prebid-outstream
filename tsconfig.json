@@ -11,8 +11,10 @@
         "module": "esnext",
         "moduleResolution": "node",
         "isolatedModules": true,
-        "typeRoots": ["./node_modules/@types", "./@types"]
+        "typeRoots": ["./node_modules/@types", "./@types"],
+        "outDir": "dist",
+        "declaration": true,
     },
     "include": ["**/*.ts"],
-    "exclude": ["node_modules", "./__mocks__"]
+    "exclude": ["node_modules", "**/__tests__", "**/__mocks__", "**/__fixtures__"]
 }

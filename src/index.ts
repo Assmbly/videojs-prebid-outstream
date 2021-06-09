@@ -72,6 +72,6 @@ export class Plugin extends videojs.Plugin implements PrebidOutStreamPlugin.Inst
     }
 }
 
-export function register(vjs: typeof videojs) {
+export default function register(vjs: typeof videojs) {
     vjs.registerPlugin('outstream', Plugin);
 }
