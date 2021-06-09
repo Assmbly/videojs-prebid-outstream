@@ -19,13 +19,22 @@ export default function register(vjs: typeof videojs = videojs) {
             this.player = player;
             this.options = options;
 
+            this.log('debug', 'Initialized plugin with options', options);
             this.parse();
         }
 
+        log(level: 'debug' | 'log' | 'error' | 'warn', ...message: any[]) {
+            if (this.options?.debug) {
+                console[level]('prebid-outstream: ', ...message);
+            }
+        }
+
         parse = async () => {
-            const vp = new VASTParser();
+            this.log('debug', 'Starting to parse vast...');
 
             try {
+                const vp = new VASTParser();
+
                 if (this.options?.adTagUrl) {
                     const response = await vp.getAndParseVAST(this.options.adTagUrl, this.options);
                     this.display(response);
@@ -40,6 +49,7 @@ export default function register(vjs: typeof videojs = videojs) {
                 }
             } catch (e) {
                 // Ad error
+                this.log('error', 'Exception Caught: ', e);
                 this.trigger('outstream.error', e);
             }
         };
@@ -49,6 +59,7 @@ export default function register(vjs: typeof videojs = videojs) {
         }
 
         display(response: VastResponse) {
+            this.log('debug', 'Displaying ad...');
             const creative = response.ads?.[0].creatives?.[0];
             if (!this.isLinearCreative(creative)) {
                 // non linear creative
@@ -56,12 +67,16 @@ export default function register(vjs: typeof videojs = videojs) {
             }
 
             if (creative.apiFramework === 'VPAID') {
+                this.log('debug', 'Loading VPAID ad...');
+
                 if (this.options?.useVPAID) {
                     // Resolve VPAID
                     const parser = new VPAIDParser(creative);
                     parser.inject(this.player.el());
                 }
             } else {
+                this.log('debug', 'Loading VAST without VPAID...');
+
                 // Resolve vast
                 const source = this.player.selectSource(creative.mediaFiles);
                 this.player.preload(true);

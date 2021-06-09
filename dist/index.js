@@ -1268,8 +1268,9 @@ function register(vjs = import_video.default) {
       __publicField(this, "options");
       __publicField(this, "parse", () => __async(this, null, function* () {
         var _a, _b;
-        const vp = new import_vast_client.VASTParser();
+        this.log("debug", "Starting to parse vast...");
         try {
+          const vp = new import_vast_client.VASTParser();
           if ((_a = this.options) == null ? void 0 : _a.adTagUrl) {
             const response = yield vp.getAndParseVAST(this.options.adTagUrl, this.options);
             this.display(response);
@@ -1281,28 +1282,39 @@ function register(vjs = import_video.default) {
             this.display(response);
           }
         } catch (e) {
+          this.log("error", "Exception Caught: ", e);
           this.trigger("outstream.error", e);
         }
       }));
       this.player = player;
       this.options = options;
+      this.log("debug", "Initialized plugin with options", options);
       this.parse();
+    }
+    log(level, ...message) {
+      var _a;
+      if ((_a = this.options) == null ? void 0 : _a.debug) {
+        console[level]("prebid-outstream: ", ...message);
+      }
     }
     isLinearCreative(creative) {
       return (creative == null ? void 0 : creative.mediaFiles) !== void 0;
     }
     display(response) {
       var _a, _b, _c;
+      this.log("debug", "Displaying ad...");
       const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b[0];
       if (!this.isLinearCreative(creative)) {
         return;
       }
       if (creative.apiFramework === "VPAID") {
+        this.log("debug", "Loading VPAID ad...");
         if ((_c = this.options) == null ? void 0 : _c.useVPAID) {
           const parser = new VPAIDParser(creative);
           parser.inject(this.player.el());
         }
       } else {
+        this.log("debug", "Loading VAST without VPAID...");
         const source = this.player.selectSource(creative.mediaFiles);
         this.player.preload(true);
         this.player.src(source);
