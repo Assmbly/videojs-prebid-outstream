@@ -98,14 +98,13 @@ export default function register(vjs: typeof videojs = videojs) {
                 const propsWithCreative = { ...props, creative };
 
                 // Remove and reinitialize control bar?
-                Object.keys(this.options.adControls).forEach(key => {
+                Object.keys(this.options.adControls).forEach((key) => {
                     if (this.options.adControls[key]) {
-                        this.player.controlBar.getChild(key)?.show()
+                        this.player.controlBar.getChild(key)?.show();
                     } else {
-                        this.player.controlBar.getChild(key)?.hide()
+                        this.player.controlBar.getChild(key)?.hide();
                     }
-                })
-
+                });
 
                 // Check for VPAID
                 if (
