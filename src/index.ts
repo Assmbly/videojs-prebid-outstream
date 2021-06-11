@@ -37,11 +37,40 @@ export default function register(vjs: typeof videojs = videojs) {
             this.player = player;
 
             // Set option defaults
-            this.options = options || {
-                adTagUrl: '',
-                adXml: '',
-                debug: false,
-                useVPAID: true,
+            const adControls = {
+                ...{
+                    volumePanel: true,
+                    playToggle: false,
+                    captionsButton: true,
+                    chaptersButton: false,
+                    subtitlesButton: false,
+                    remainingTimeDisplay: false,
+                    progressControl: false,
+                    fullscreenToggle: true,
+                    playbackRateMenuButton: false,
+                    pictureInPictureToggle: false,
+                    currentTimeDisplay: false,
+                    timeDivider: false,
+                    durationDisplay: false,
+                    liveDisplay: false,
+                    seekToLive: false,
+                    customControlSpacer: false,
+                    descriptionsButton: false,
+                    subsCapsButton: false,
+                    audioTrackButton: false,
+                },
+                ...options?.adControls,
+            };
+
+            this.options = {
+                ...{
+                    adTagUrl: '',
+                    adXml: '',
+                    debug: false,
+                    useVPAID: true,
+                },
+                ...options,
+                ...{ adControls },
             };
 
             this.setup();
@@ -67,6 +96,16 @@ export default function register(vjs: typeof videojs = videojs) {
                 logger.debug('Loading creative: ', creative);
 
                 const propsWithCreative = { ...props, creative };
+
+                // Remove and reinitialize control bar?
+                Object.keys(this.options.adControls).forEach(key => {
+                    if (this.options.adControls[key]) {
+                        this.player.controlBar.getChild(key)?.show()
+                    } else {
+                        this.player.controlBar.getChild(key)?.hide()
+                    }
+                })
+
 
                 // Check for VPAID
                 if (
