@@ -9,40 +9,73 @@
 //    }
 //}
 
+import { VideoJsPlayer } from 'video.js';
 import { VastCreativeLinear } from 'vast-client';
 
-// This is the ad unit?
-export class VPAIDParser implements iab.vpaid.VpaidCreative {
-    constructor(readonly response: VastCreativeLinear) {}
+import { BaseWithCreative } from './index';
 
-    inject(element: Element) {
-        const iframe = document.createElement('iframe');
-        iframe.id = `${this.response.id}${Date.now()}`;
-        iframe.style.cssText = 'margin:0;border:0;';
-        element.appendChild(iframe);
+const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
+    NORMAL: 'normal',
+    FULLSCREEN: 'fullscreen',
+    THUMBNAIL: 'thumbnail',
+};
 
-        const iframeDoc = iframe.contentDocument;
-        if (iframeDoc) {
-            const script = iframeDoc.createElement('script');
-            script.src = this.response.mediaFiles[0].fileURL || '';
-            script.onload = () => {
-                // iframe.contentWindow['getVPAIDAd'] will be available here
-                //    var fn = iframe.contentWindow['getVPAIDAd'];
-                //    if (fn && typeof fn == 'function') {
-                //    VPAIDCreative = fn();
-                // getVPAIDAd?: () => iab.vpaid.VpaidCreative;
-                // Inject iframe into element
-            };
+export function displayVPAID({ player, creative, logger }: BaseWithCreative) {
+    logger.debug('Displaying VPAID...');
 
-            iframeDoc.appendChild(script);
+    const container = document.createElement('div');
+    player.el().appendChild(container);
+
+    const iframe = document.createElement('iframe');
+    iframe.id = `${creative.id}_${Date.now()}`;
+    iframe.style.cssText = 'margin:0;border:0;';
+    player.el().appendChild(iframe);
+
+    // Add script to post ready message
+    const iframeDoc = iframe.contentDocument;
+    if (!iframeDoc) {
+        // Unable to write iframe
+        return;
+    }
+    const script = iframeDoc.createElement('script');
+
+    // TODO add mediafile search algo
+    const mediaFile = creative.mediaFiles[0];
+    script.src = mediaFile.fileURL || '';
+    script.onload = () => {
+        logger.debug('VPAID script has loaded...');
+        const adunit = iframe.contentWindow?.getVPAIDAd?.();
+        if (!adunit) {
+            // no adunit found
+            logger.error('no VPAID adunit found...');
+            return;
         }
 
-        // Use css to reset the frame style
-        // Inject VPAIDCreative wrapper function
+        logger.debug('Initializing VPAID adunit...');
+        adunit.initAd(
+            player.width(),
+            player.height(),
+            VIEW_MODE.NORMAL,
+            mediaFile.bitrate,
+            { AdParameters: creative.adParameters || '' },
+            {
+                slot: container,
+                videoSlot: player.tech({ ignoreWarning: true }).el() as HTMLVideoElement,
+                videoSlotCanAutoPlay: !!player.autoplay(),
+            }
+        );
+    };
 
-        // Listen to mouse move/touch events
-        // Set player user Active
-    }
+    iframeDoc.head.appendChild(script);
+
+    // Inject VPAIDCreative wrapper function
+    // Listen to mouse move/touch events
+    // Set player user Active
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+class VPAIDWrapper implements iab.vpaid.VpaidCreative {
+    constructor(readonly player: VideoJsPlayer, readonly creative: VastCreativeLinear) {}
 
     initAd() {
         // Initialize VPAID ad

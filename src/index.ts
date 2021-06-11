@@ -1,6 +1,24 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VASTParser, VastResponse, VastCreativeLinear } from 'vast-client';
-import { VPAIDParser } from './vpaid';
+import { VastCreativeLinear, VastCreative } from 'vast-client';
+
+import { displayVPAID } from './vpaid';
+import { displayVASTNative, parseVAST } from './vast';
+import { getLogger, ILogger } from './logger';
+
+export type PrebidOutStreamPluginOptions = PrebidOutStreamPlugin.Options;
+
+export interface BaseProps {
+    options: PrebidOutStreamPlugin.Options;
+    player: VideoJsPlayer;
+    logger: ILogger;
+}
+
+export interface BaseWithCreative {
+    options: PrebidOutStreamPlugin.Options;
+    player: VideoJsPlayer;
+    logger: ILogger;
+    creative: VastCreativeLinear;
+}
 
 // TODO
 // Add logger for debug option
@@ -11,81 +29,61 @@ export default function register(vjs: typeof videojs = videojs) {
 
     const Plugin = class Plugin extends vjsPlugin implements PrebidOutStreamPlugin.Instance {
         player: VideoJsPlayer;
-        options?: PrebidOutStreamPlugin.Options;
+        options: PrebidOutStreamPlugin.Options;
 
         constructor(player: VideoJsPlayer, options?: PrebidOutStreamPlugin.Options) {
             super(player, options);
 
             this.player = player;
-            this.options = options;
 
-            this.log('debug', 'Initialized plugin with options', options);
-            this.parse();
+            // Set option defaults
+            this.options = options || {
+                adTagUrl: '',
+                adXml: '',
+                debug: false,
+                useVPAID: true,
+            };
+
+            this.setup();
         }
 
-        log(level: 'debug' | 'log' | 'error' | 'warn', ...message: any[]) {
-            if (this.options?.debug) {
-                console[level]('prebid-outstream: ', ...message);
-            }
-        }
-
-        parse = async () => {
-            this.log('debug', 'Starting to parse vast...');
+        async setup() {
+            const logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
+            logger.debug('Initialize plugin with options', this.options);
 
             try {
-                const vp = new VASTParser();
+                const props = { player: this.player, options: this.options, logger };
+                const response = await parseVAST(props);
 
-                if (this.options?.adTagUrl) {
-                    const response = await vp.getAndParseVAST(this.options.adTagUrl, this.options);
-                    this.display(response);
+                logger.debug('Vast parsed: ', response);
+
+                // Find creative
+                const creative = response.ads?.[0].creatives?.find((c) => this.isLinearCreative(c));
+                if (!this.isLinearCreative(creative)) {
+                    // non linear creative
+                    return;
                 }
 
-                if (this.options?.adXml) {
-                    // Needs try catch block to catch parser errors
-                    const xmlParser = new DOMParser();
-                    const doc = xmlParser.parseFromString(this.options.adXml, 'text/xml');
-                    const response = await vp.parseVAST(doc, this.options);
-                    this.display(response);
+                logger.debug('Loading creative: ', creative);
+
+                const propsWithCreative = { ...props, creative };
+
+                // Check for VPAID
+                if (
+                    creative.apiFramework === 'VPAID' ||
+                    creative.mediaFiles.some((media) => media.apiFramework === 'VPAID')
+                ) {
+                    displayVPAID(propsWithCreative);
+                } else {
+                    displayVASTNative(propsWithCreative);
                 }
             } catch (e) {
-                // Ad error
-                this.log('error', 'Exception Caught: ', e);
-                this.trigger('outstream.error', e);
+                logger.error('Exception caught: ', e);
             }
-        };
-
-        isLinearCreative(creative: any): creative is VastCreativeLinear {
-            return creative?.mediaFiles !== undefined;
         }
 
-        display(response: VastResponse) {
-            this.log('debug', 'Displaying ad...');
-            const creative = response.ads?.[0].creatives?.[0];
-            if (!this.isLinearCreative(creative)) {
-                // non linear creative
-                return;
-            }
-
-            if (creative.apiFramework === 'VPAID') {
-                this.log('debug', 'Loading VPAID ad...');
-
-                if (this.options?.useVPAID) {
-                    // Resolve VPAID
-                    const parser = new VPAIDParser(creative);
-                    parser.inject(this.player.el());
-                }
-            } else {
-                this.log('debug', 'Loading VAST without VPAID...');
-
-                // Resolve vast
-                const source = this.player.selectSource(creative.mediaFiles);
-                this.player.preload(true);
-                this.player.src(source);
-
-                // Autoplay
-            }
-
-            // Play all ads up until max duration
+        isLinearCreative(creative?: VastCreative): creative is VastCreativeLinear {
+            return creative?.type === 'linear';
         }
     };
 

@@ -1,10 +1,26 @@
 var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[Object.keys(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -1178,85 +1194,112 @@ __export(exports, {
   default: () => register
 });
 var import_video = __toModule(require("video.js"));
-var import_vast_client = __toModule(require_vast_client_min());
 
 // src/vpaid.ts
-var VPAIDParser = class {
-  constructor(response) {
-    this.response = response;
+var VIEW_MODE = {
+  NORMAL: "normal",
+  FULLSCREEN: "fullscreen",
+  THUMBNAIL: "thumbnail"
+};
+function displayVPAID({ player, creative, logger }) {
+  logger.debug("Displaying VPAID...");
+  const container = document.createElement("div");
+  player.el().appendChild(container);
+  const iframe = document.createElement("iframe");
+  iframe.id = `${creative.id}_${Date.now()}`;
+  iframe.style.cssText = "margin:0;border:0;";
+  player.el().appendChild(iframe);
+  const iframeDoc = iframe.contentDocument;
+  if (!iframeDoc) {
+    return;
   }
-  inject(element) {
-    const iframe = document.createElement("iframe");
-    iframe.id = `${this.response.id}${Date.now()}`;
-    iframe.style.cssText = "margin:0;border:0;";
-    element.appendChild(iframe);
-    const iframeDoc = iframe.contentDocument;
-    if (iframeDoc) {
-      const script = iframeDoc.createElement("script");
-      script.src = this.response.mediaFiles[0].fileURL || "";
-      script.onload = () => {
-      };
-      iframeDoc.appendChild(script);
+  const script = iframeDoc.createElement("script");
+  const mediaFile = creative.mediaFiles[0];
+  script.src = mediaFile.fileURL || "";
+  script.onload = () => {
+    var _a, _b;
+    logger.debug("VPAID script has loaded...");
+    const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
+    if (!adunit) {
+      logger.error("no VPAID adunit found...");
+      return;
     }
+    logger.debug("Initializing VPAID adunit...");
+    adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, mediaFile.bitrate, { AdParameters: creative.adParameters || "" }, {
+      slot: container,
+      videoSlot: player.tech({ ignoreWarning: true }).el(),
+      videoSlotCanAutoPlay: !!player.autoplay()
+    });
+  };
+  iframeDoc.head.appendChild(script);
+}
+
+// src/vast.ts
+var import_vast_client = __toModule(require_vast_client_min());
+function parseVAST(_0) {
+  return __async(this, arguments, function* ({ logger, options }) {
+    logger.debug("Starting to parse vast...");
+    const vp = new import_vast_client.VASTParser();
+    if (options == null ? void 0 : options.adTagUrl) {
+      return yield vp.getAndParseVAST(options.adTagUrl, options);
+    }
+    if (options == null ? void 0 : options.adXml) {
+      const xmlParser = new DOMParser();
+      const doc = xmlParser.parseFromString(options.adXml, "text/xml");
+      return yield vp.parseVAST(doc, options);
+    }
+    throw new Error("no vast provided");
+  });
+}
+function displayVASTNative({ creative, player, logger }) {
+  logger.debug("Displaying native VAST...");
+  const sources = creative.mediaFiles.map((media) => ({
+    src: media.fileURL || "",
+    type: media.mimeType || void 0
+  }));
+  const source = player.selectSource(sources);
+  logger.debug("Loading selected source...", source);
+  player.preload(true);
+  player.src(source.source);
+}
+
+// src/logger.ts
+var LogWrapper = class {
+  constructor(prefix, logger) {
+    this.prefix = prefix;
+    this.logger = logger;
   }
-  initAd() {
+  call(level, ...message) {
+    this.logger[level](this.prefix, ...message);
   }
-  startAd() {
+  log(...message) {
+    this.call("log", ...message);
   }
-  stopAd() {
+  debug(...message) {
+    this.call("debug", ...message);
   }
-  setAdVolume() {
+  warn(...message) {
+    this.call("warn", ...message);
   }
-  getAdVolume() {
-    return 0;
-  }
-  resizeAd() {
-  }
-  pauseAd() {
-  }
-  resumeAd() {
-  }
-  expandAd() {
-  }
-  getAdExpanded() {
-    return false;
-  }
-  getAdSkippableState() {
-    return false;
-  }
-  collapseAd() {
-  }
-  skipAd() {
-  }
-  subscribe() {
-  }
-  unsubscribe() {
-  }
-  handshakeVersion() {
-    return "2.0";
-  }
-  getAdLinear() {
-    return false;
-  }
-  getAdWidth() {
-    return 640;
-  }
-  getAdHeight() {
-    return 480;
-  }
-  getAdRemainingTime() {
-    return 0;
-  }
-  getAdDuration() {
-    return 1e4;
-  }
-  getAdCompanions() {
-    return "";
-  }
-  getAdIcons() {
-    return false;
+  error(...message) {
+    this.call("error", ...message);
   }
 };
+function getLogger(prefix, debug) {
+  if (debug && console) {
+    return new LogWrapper(prefix, console);
+  }
+  return new LogWrapper(prefix, {
+    log: () => {
+    },
+    debug: () => {
+    },
+    warn: () => {
+    },
+    error: () => {
+    }
+  });
+}
 
 // src/index.ts
 function register(vjs = import_video.default) {
@@ -1266,59 +1309,42 @@ function register(vjs = import_video.default) {
       super(player, options);
       __publicField(this, "player");
       __publicField(this, "options");
-      __publicField(this, "parse", () => __async(this, null, function* () {
+      this.player = player;
+      this.options = options || {
+        adTagUrl: "",
+        adXml: "",
+        debug: false,
+        useVPAID: true
+      };
+      this.setup();
+    }
+    setup() {
+      return __async(this, null, function* () {
         var _a, _b;
-        this.log("debug", "Starting to parse vast...");
+        const logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
+        logger.debug("Initialize plugin with options", this.options);
         try {
-          const vp = new import_vast_client.VASTParser();
-          if ((_a = this.options) == null ? void 0 : _a.adTagUrl) {
-            const response = yield vp.getAndParseVAST(this.options.adTagUrl, this.options);
-            this.display(response);
+          const props = { player: this.player, options: this.options, logger };
+          const response = yield parseVAST(props);
+          logger.debug("Vast parsed: ", response);
+          const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b.find((c) => this.isLinearCreative(c));
+          if (!this.isLinearCreative(creative)) {
+            return;
           }
-          if ((_b = this.options) == null ? void 0 : _b.adXml) {
-            const xmlParser = new DOMParser();
-            const doc = xmlParser.parseFromString(this.options.adXml, "text/xml");
-            const response = yield vp.parseVAST(doc, this.options);
-            this.display(response);
+          logger.debug("Loading creative: ", creative);
+          const propsWithCreative = __spreadProps(__spreadValues({}, props), { creative });
+          if (creative.apiFramework === "VPAID" || creative.mediaFiles.some((media) => media.apiFramework === "VPAID")) {
+            displayVPAID(propsWithCreative);
+          } else {
+            displayVASTNative(propsWithCreative);
           }
         } catch (e) {
-          this.log("error", "Exception Caught: ", e);
-          this.trigger("outstream.error", e);
+          logger.error("Exception caught: ", e);
         }
-      }));
-      this.player = player;
-      this.options = options;
-      this.log("debug", "Initialized plugin with options", options);
-      this.parse();
-    }
-    log(level, ...message) {
-      var _a;
-      if ((_a = this.options) == null ? void 0 : _a.debug) {
-        console[level]("prebid-outstream: ", ...message);
-      }
+      });
     }
     isLinearCreative(creative) {
-      return (creative == null ? void 0 : creative.mediaFiles) !== void 0;
-    }
-    display(response) {
-      var _a, _b, _c;
-      this.log("debug", "Displaying ad...");
-      const creative = (_b = (_a = response.ads) == null ? void 0 : _a[0].creatives) == null ? void 0 : _b[0];
-      if (!this.isLinearCreative(creative)) {
-        return;
-      }
-      if (creative.apiFramework === "VPAID") {
-        this.log("debug", "Loading VPAID ad...");
-        if ((_c = this.options) == null ? void 0 : _c.useVPAID) {
-          const parser = new VPAIDParser(creative);
-          parser.inject(this.player.el());
-        }
-      } else {
-        this.log("debug", "Loading VAST without VPAID...");
-        const source = this.player.selectSource(creative.mediaFiles);
-        this.player.preload(true);
-        this.player.src(source);
-      }
+      return (creative == null ? void 0 : creative.type) === "linear";
     }
   };
   vjs.registerPlugin("outstream", Plugin);
