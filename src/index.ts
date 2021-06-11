@@ -1,5 +1,5 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear, VastCreative } from 'vast-client';
+import { VastCreativeLinear, VastCreative, VASTTracker } from 'vast-client';
 
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
@@ -67,7 +67,6 @@ export default function register(vjs: typeof videojs = videojs) {
                 logger.debug('Loading creative: ', creative);
 
                 const propsWithCreative = { ...props, creative };
-
                 // Check for VPAID
                 if (
                     creative.apiFramework === 'VPAID' ||
@@ -77,6 +76,16 @@ export default function register(vjs: typeof videojs = videojs) {
                 } else {
                     displayVASTNative(propsWithCreative);
                 }
+
+                const tracker = new VASTTracker(null, response.ads[0], creative);
+                this.player.on('canplay', () => {
+                    // Check if source = creative source?
+                    tracker.trackImpression();
+                });
+
+                this.player.on('ended', () => {
+                    tracker.complete();
+                });
             } catch (e) {
                 logger.error('Exception caught: ', e);
             }
