@@ -4,12 +4,19 @@ declare namespace PrebidOutStreamPlugin {
         parse: () => Promise<void>;
     }
 
-    export type Options = import('@types/vast-client').VastRequestOptions & PluginOptions;
+    export type Options = import('@types/vast-client').VastRequestOptions & (VastURLOptions | VastXMLOptions);
     interface PluginOptions {
+        adControls?: import('@types/video.js').ControlBarOptions;
+        debug?: boolean;
+        useVPAID?: boolean;
+    }
+
+    export interface VastURLOptions extends PluginOptions {
         adTagUrl: string;
+    }
+
+    export interface VastXMLOptions extends PluginOptions {
         adXml: string;
-        debug: boolean;
-        useVPAID: boolean;
     }
 }
 
