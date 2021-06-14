@@ -131,6 +131,24 @@ export default function register(vjs: typeof videojs = videojs) {
                     tracker.setProgress(this.player.currentTime());
                 });
 
+                this.player.on('fullscreenchange', () => {
+                    logger.debug('Sending full screen change...', this.player.isFullscreen());
+                    tracker.setFullscreen(this.player.isFullscreen());
+                });
+
+                this.player.on('volumechange', () => {
+                    tracker.setMuted(this.player.muted());
+                });
+
+                this.player.on('play', () => {
+                    logger.debug('Sending resume tracking...');
+                    tracker.setPaused(false);
+                });
+                this.player.on('pause', () => {
+                    logger.debug('Sending pause tracking...');
+                    tracker.setPaused(true);
+                });
+
                 if (creative.videoClickThroughURLTemplate?.url) {
                     // Use mouseup and touchend event because
                     // 1. mouseup event changes player pause state when clicking on video
