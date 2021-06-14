@@ -118,13 +118,55 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 const tracker = new VASTTracker(null, response.ads[0], creative);
                 this.player.on('canplay', () => {
-                    // Check if source = creative source?
+                    logger.debug('Sending tracking impression...');
                     tracker.trackImpression();
                 });
 
                 this.player.on('ended', () => {
+                    logger.debug('Sending tracking complete...');
                     tracker.complete();
                 });
+
+                this.player.on('timeupdate', () => {
+                    tracker.setProgress(this.player.currentTime());
+                });
+
+                if (creative.videoClickThroughURLTemplate?.url) {
+                    // Use mouseup and touchend event because
+                    // 1. mouseup event changes player pause state when clicking on video
+                    // 2. touch events are blocked for mobile: https://github.com/videojs/video.js/blob/main/src/js/player.js#L2044
+                    ['mouseup', 'touchend'].forEach((eventName) => {
+                        this.player.el().addEventListener(
+                            eventName,
+                            (e) => {
+                                const elem = e.target as HTMLElement;
+                                if (elem.tagName === 'VIDEO' && !this.player.paused()) {
+                                    logger.debug('Sending click event on video...');
+                                    tracker.click();
+                                    window.open(creative.videoClickThroughURLTemplate!.url, '_blank');
+                                }
+                            },
+                            { capture: true, passive: true }
+                        );
+                    });
+                }
+
+                // Replicate big play button capabilities for mobile
+                this.player.el().addEventListener(
+                    'touchend',
+                    (e) => {
+                        const elem = e.target as HTMLElement;
+                        if (elem.tagName === 'VIDEO') {
+                            if (this.player.paused()) {
+                                // TODO Silence "uncaught play promise" error messages
+                                this.player.play();
+                            } else {
+                                this.player.pause();
+                            }
+                        }
+                    },
+                    { capture: true, passive: true }
+                );
             } catch (e) {
                 logger.error('Exception caught: ', e);
             }
