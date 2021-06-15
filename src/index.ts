@@ -123,14 +123,17 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 const tracker = new VASTTracker(null, response.ads[0], creative);
                 if (this.options.showClose) {
-                    this.player.el().appendChild(CloseComponent({onClick: () => {
-                        logger.debug('Sending ad closed...');
-                        tracker.skip();
-                        this.player.trigger('adclose');
-                        // TODO: Unload ad
-                    }}))
+                    this.player.el().appendChild(
+                        CloseComponent({
+                            onClick: () => {
+                                logger.debug('Sending ad closed...');
+                                tracker.skip();
+                                this.player.trigger('adclose');
+                                // TODO: Unload ad
+                            },
+                        })
+                    );
                 }
-
 
                 this.player.on('canplay', () => {
                     logger.debug('Sending tracking impression...');
