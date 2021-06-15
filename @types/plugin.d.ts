@@ -9,6 +9,7 @@ declare namespace PrebidOutStreamPlugin {
         adControls?: import('@types/video.js').ControlBarOptions;
         debug?: boolean;
         useVPAID?: boolean;
+        showClose?: boolean;
     }
 
     export interface VastURLOptions extends PluginOptions {

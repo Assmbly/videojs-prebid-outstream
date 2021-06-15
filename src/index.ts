@@ -4,6 +4,9 @@ import { VastCreativeLinear, VastCreative, VASTTracker } from 'vast-client';
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
 import { getLogger, ILogger } from './logger';
+import CloseComponent from './component/close';
+
+import './index.css';
 
 export type PrebidOutStreamPluginOptions = PrebidOutStreamPlugin.Options;
 
@@ -68,6 +71,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     adXml: '',
                     debug: false,
                     useVPAID: true,
+                    showClose: true,
                 },
                 ...options,
                 ...{ adControls },
@@ -86,10 +90,10 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 logger.debug('Vast parsed: ', response);
 
-                // Find creative
+                // Find creative to display
                 const creative = response.ads?.[0].creatives?.find((c) => this.isLinearCreative(c));
                 if (!this.isLinearCreative(creative)) {
-                    // non linear creative
+                    // non-linear creative
                     return;
                 }
 
@@ -97,7 +101,8 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 const propsWithCreative = { ...props, creative };
 
-                // Remove and reinitialize control bar?
+                // Hide each control element except for the ones selected in the adControls
+                // options
                 Object.keys(this.options.adControls).forEach((key) => {
                     if (this.options.adControls[key]) {
                         this.player.controlBar.getChild(key)?.show();
@@ -117,6 +122,19 @@ export default function register(vjs: typeof videojs = videojs) {
                 }
 
                 const tracker = new VASTTracker(null, response.ads[0], creative);
+                if (this.options.showClose) {
+                    this.player.el().appendChild(
+                        CloseComponent({
+                            onClick: () => {
+                                logger.debug('Sending ad closed...');
+                                tracker.skip();
+                                this.player.trigger('adclose');
+                                // TODO: Unload ad
+                            },
+                        })
+                    );
+                }
+
                 this.player.on('canplay', () => {
                     logger.debug('Sending tracking impression...');
                     tracker.trackImpression();
