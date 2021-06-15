@@ -1,10 +1,11 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear, VastCreative, VASTTracker } from 'vast-client';
+import { VastCreativeLinear, VastCreative } from 'vast-client';
 
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
 import { getLogger, ILogger } from './logger';
 import CloseComponent from './component/close';
+import { createTracker } from './tracker';
 
 import './index.css';
 
@@ -121,52 +122,23 @@ export default function register(vjs: typeof videojs = videojs) {
                     displayVASTNative(propsWithCreative);
                 }
 
-                const tracker = new VASTTracker(null, response.ads[0], creative);
+                const tracker = createTracker({ ...propsWithCreative, ad: response.ads[0] });
+
+                // Setup close button functionality
                 if (this.options.showClose) {
                     this.player.el().appendChild(
                         CloseComponent({
                             onClick: () => {
                                 logger.debug('Sending ad closed...');
-                                tracker.skip();
                                 this.player.trigger('adclose');
+                                tracker.skip();
                                 // TODO: Unload ad
                             },
                         })
                     );
                 }
 
-                this.player.on('canplay', () => {
-                    logger.debug('Sending tracking impression...');
-                    tracker.trackImpression();
-                });
-
-                this.player.on('ended', () => {
-                    logger.debug('Sending tracking complete...');
-                    tracker.complete();
-                });
-
-                this.player.on('timeupdate', () => {
-                    tracker.setProgress(this.player.currentTime());
-                });
-
-                this.player.on('fullscreenchange', () => {
-                    logger.debug('Sending full screen change...', this.player.isFullscreen());
-                    tracker.setFullscreen(this.player.isFullscreen());
-                });
-
-                this.player.on('volumechange', () => {
-                    tracker.setMuted(this.player.muted());
-                });
-
-                this.player.on('play', () => {
-                    logger.debug('Sending resume tracking...');
-                    tracker.setPaused(false);
-                });
-                this.player.on('pause', () => {
-                    logger.debug('Sending pause tracking...');
-                    tracker.setPaused(true);
-                });
-
+                // Setup clickthrough tracking and functionality
                 if (creative.videoClickThroughURLTemplate?.url) {
                     // Use mouseup and touchend event because
                     // 1. mouseup event changes player pause state when clicking on video
@@ -178,8 +150,8 @@ export default function register(vjs: typeof videojs = videojs) {
                                 const elem = e.target as HTMLElement;
                                 if (elem.tagName === 'VIDEO' && !this.player.paused()) {
                                     logger.debug('Sending click event on video...');
+                                    this.player.trigger('adclick');
                                     tracker.click();
-                                    window.open(creative.videoClickThroughURLTemplate!.url, '_blank');
                                 }
                             },
                             { capture: true, passive: true }
