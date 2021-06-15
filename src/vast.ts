@@ -29,21 +29,16 @@ export async function parseVAST({ logger, options }: BaseProps): Promise<VastRes
     throw new Error('no vast provided');
 }
 
-export function displayVASTNative({ creative, player, logger }: BaseWithCreative) {
+export function displayVASTNative({ player, logger, display: { media } }: BaseWithCreative) {
     logger.debug('Displaying native VAST...');
 
-    // Resolve vast
-    const sources = creative.mediaFiles.map<videojs.Tech.SourceObject>((media) => ({
+    const source: videojs.Tech.SourceObject = {
         src: media.fileURL || '',
         type: media.mimeType || undefined,
-    }));
-    // Filter out mimetypes of flv
+    };
 
-    const source = player.selectSource(sources);
     logger.debug('Loading selected source...', source);
 
     player.preload(true);
-    player.src(source.source);
-
-    // Autoplay
+    player.src(source.src);
 }

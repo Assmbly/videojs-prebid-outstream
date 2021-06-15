@@ -1,12 +1,8 @@
-import { VASTTracker, VastAd } from 'vast-client';
+import { VASTTracker } from 'vast-client';
 
 import { BaseWithCreative } from './index';
 
-interface TrackerProps extends BaseWithCreative {
-    ad: VastAd;
-}
-
-export function createTracker({ player, creative, logger, ad }: TrackerProps) {
+export function createTracker({ player, logger, display: { creative, ad } }: BaseWithCreative) {
     const tracker = new VASTTracker(null, ad, creative);
     player.on('canplay', () => {
         logger.debug('Sending tracking impression...');
