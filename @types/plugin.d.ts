@@ -10,6 +10,7 @@ declare namespace PrebidOutStreamPlugin {
         debug?: boolean;
         useVPAID?: boolean;
         showClose?: boolean;
+        minVPAIDAdStart?: number;
     }
 
     export interface VastURLOptions extends PluginOptions {

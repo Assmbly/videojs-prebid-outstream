@@ -2,9 +2,17 @@ import { VASTTracker } from 'vast-client';
 
 import { BaseWithCreative } from './index';
 
-export function createTracker({ player, logger, display: { creative, ad } }: BaseWithCreative) {
+export function createTracker({ player, logger, display: { creative, ad } }: BaseWithCreative): VASTTracker {
+    const beforeAdLoad = player.currentSrc();
     const tracker = new VASTTracker(null, ad, creative);
+    let canplay = false;
     player.on('canplay', () => {
+        if (beforeAdLoad === player.el().querySelector('video')?.src) {
+            // No ad media was loaded
+            return;
+        }
+
+        canplay = true;
         logger.debug('Sending tracking impression...');
         player.trigger('adimpression');
         tracker.trackImpression();
@@ -15,6 +23,10 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
     });
 
     player.on('ended', () => {
+        if (!canplay) {
+            return;
+        }
+
         logger.debug('Sending tracking complete...');
         player.trigger('adcomplete');
         tracker.complete();
@@ -38,11 +50,19 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
     });
 
     player.on('play', () => {
+        if (!canplay) {
+            return;
+        }
+
         logger.debug('Sending resume tracking...');
         tracker.setPaused(false);
     });
 
     player.on('pause', () => {
+        if (!canplay) {
+            return;
+        }
+
         logger.debug('Sending pause tracking...');
         tracker.setPaused(true);
     });
