@@ -1,6 +1,3 @@
-import { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear } from 'vast-client';
-
 import { BaseWithCreative } from './index';
 import VastError, { VPAID_ERROR } from './errors';
 
@@ -54,6 +51,10 @@ export function displayVPAID({ player, logger, options, display: { creative, med
             throw new Error('no VPAID adunit found');
         }
 
+        logger.debug('Subscribing to VPAID adunit events');
+        const wrapper = new VPAIDWrapper(adunit);
+        wrapper.registerCallbacks();
+
         logger.debug('Initializing VPAID adunit...');
         adunit.initAd(
             player.width(),
@@ -72,155 +73,50 @@ export function displayVPAID({ player, logger, options, display: { creative, med
     iframeDoc.head.appendChild(script);
 }
 
-// Inject VPAIDCreative wrapper function
-// Listen to mouse move/touch events
-// Set player user Active
+class VPAIDWrapper {
+    private callbacks: iab.vpaid.EventsMap = {
+        AdStarted: this.dummy,
+        AdStopped: this.dummy,
+        AdSkipped: this.dummy,
+        AdLoaded: this.dummy,
+        AdLinearChange: this.dummy,
+        AdSizeChange: this.dummy,
+        AdExpandedChange: this.dummy,
+        AdSkippableStateChange: this.dummy,
+        AdDurationChange: this.dummy,
+        AdRemainingTimeChange: this.dummy,
+        AdVolumeChange: this.dummy,
+        AdImpression: this.dummy,
+        AdClickThru: this.dummy,
+        AdInteraction: this.dummy,
+        AdVideoStart: this.dummy,
+        AdVideoFirstQuartile: this.dummy,
+        AdVideoMidpoint: this.dummy,
+        AdVideoThirdQuartile: this.dummy,
+        AdVideoComplete: this.dummy,
+        AdUserAcceptInvitation: this.dummy,
+        AdUserMinimize: this.dummy,
+        AdUserClose: this.dummy,
+        AdPaused: this.dummy,
+        AdPlaying: this.dummy,
+        AdError: this.dummy,
+        AdLog: this.dummy,
+    };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-class VPAIDWrapper implements iab.vpaid.VpaidCreative {
-    constructor(readonly player: VideoJsPlayer, readonly creative: VastCreativeLinear) {}
+    constructor(readonly adunit: iab.vpaid.VpaidCreative) {}
 
-    initAd() {
-        // Initialize VPAID ad
-    }
-
-    startAd() {
-        // Undefined method
-    }
-
-    stopAd() {
-        // Undefined method
-    }
-
-    setAdVolume() {
-        // Undefined method
-    }
-
-    getAdVolume(): number {
-        // Undefined method
-        return 0;
-    }
-
-    resizeAd() {
-        // Undefined method
-    }
-
-    pauseAd() {
-        // Undefined method
-    }
-
-    resumeAd() {
-        // Undefined method
-    }
-
-    expandAd() {
-        // Undefined method
-    }
-
-    getAdExpanded(): boolean {
-        // Undefined method
-        return false;
-    }
-
-    getAdSkippableState(): boolean {
-        // Undefined method
-        return false;
-    }
-
-    collapseAd() {
-        // Undefined method
-    }
-
-    skipAd() {
-        // Undefined method
-    }
-
-    subscribe() {
-        // Undefined method
-    }
-
-    unsubscribe() {
-        // Undefined method
-    }
-
-    handshakeVersion(): string {
-        // VPAID version supported
-        return '2.0';
-    }
-
-    getAdLinear(): boolean {
-        return false;
-    }
-
-    getAdWidth(): number {
-        return 640;
-    }
-
-    getAdHeight(): number {
-        return 480;
-    }
-
-    getAdRemainingTime(): number {
-        return 0;
-    }
-
-    getAdDuration(): number {
-        return 10000;
-    }
-
-    getAdCompanions(): string {
-        // If the video player calls for adCompanions(), it must wait until after receiving the VPAID
-        // AdLoaded event, and any companions provided must not display until after the VPAID
-        // AdImpression event is received.
-        return '';
-    }
-
-    getAdIcons(): boolean {
-        return false;
-    }
-}
-
-/*class VPAIDWrapper {
-    checkVPAIDInterface() {}
-
-    setCallbacksForCreative() {
-        //The key of the object is the event name and the value is a reference to the callback function that is registered with the creative
-        const callbacks = {
-            AdStarted: this.onStartAd,
-            AdStopped: this.onStopAd,
-            AdSkipped: this.onSkipAd,
-            AdLoaded: this.onAdLoaded,
-            AdLinearChange: this.onAdLinearChange,
-            AdSizeChange: this.onAdSizeChange,
-            AdExpandedChange: this.onAdExpandedChange,
-            AdSkippableStateChange: this.onAdSkippableStateChange,
-            AdDurationChange: this.onAdDurationChange,
-            AdRemainingTimeChange: this.onAdRemainingTimeChange,
-            AdVolumeChange: this.onAdVolumeChange,
-            AdImpression: this.onAdImpression,
-            AdClickThru: this.onAdClickThru,
-            AdInteraction: this.onAdInteraction,
-            AdVideoStart: this.onAdVideoStart,
-            AdVideoFirstQuartile: this.onAdVideoFirstQuartile,
-            AdVideoMidpoint: this.onAdVideoMidpoint,
-            AdVideoThirdQuartile: this.onAdVideoThirdQuartile,
-            AdVideoComplete: this.onAdVideoComplete,
-            AdUserAcceptInvitation: this.onAdUserAcceptInvitation,
-            AdUserMinimize: this.onAdUserMinimize,
-            AdUserClose: this.onAdUserClose,
-            AdPaused: this.onAdPaused,
-            AdPlaying: this.onAdPlaying,
-            AdError: this.onAdError,
-            AdLog: this.onAdLog,
-        };
-
-        // Looping through the object and registering each of the callbacks with the creative
-        for (const eventName in callbacks) {
-            this._creative.subscribe(callbacks[eventName], eventName, this);
+    registerCallbacks() {
+        if (typeof this.adunit.subscribe === 'function') {
+            // Subscribe to callbacks
+            Object.keys(this.callbacks).forEach((name) => {
+                const eventName = name as iab.vpaid.EventsNames;
+                this.adunit.subscribe(this.callbacks[eventName], eventName);
+            });
         }
     }
 
-    initAd() {
-        this._creative.initAd(width, height, viewMode, desiredBitrate, creativeData, environmentVars);
+    dummy() {
+        // Dummy method to squelch errors from callbacks not found
+        // See https://github.com/redbrickmedia/videojs-prebid-outstream/pull/16
     }
-}*/
+}
