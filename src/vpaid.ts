@@ -20,7 +20,7 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
-export function displayVPAID({ player, creative, logger }: BaseWithCreative) {
+export function displayVPAID({ player, logger, display: { creative, media } }: BaseWithCreative) {
     logger.debug('Displaying VPAID...');
 
     const container = document.createElement('div');
@@ -39,9 +39,7 @@ export function displayVPAID({ player, creative, logger }: BaseWithCreative) {
     }
     const script = iframeDoc.createElement('script');
 
-    // TODO add mediafile search algo
-    const mediaFile = creative.mediaFiles[0];
-    script.src = mediaFile.fileURL || '';
+    script.src = media.fileURL || '';
     script.onload = () => {
         logger.debug('VPAID script has loaded...');
         const adunit = iframe.contentWindow?.getVPAIDAd?.();
@@ -56,7 +54,7 @@ export function displayVPAID({ player, creative, logger }: BaseWithCreative) {
             player.width(),
             player.height(),
             VIEW_MODE.NORMAL,
-            mediaFile.bitrate,
+            media.bitrate,
             { AdParameters: creative.adParameters || '' },
             {
                 slot: container,
@@ -67,11 +65,11 @@ export function displayVPAID({ player, creative, logger }: BaseWithCreative) {
     };
 
     iframeDoc.head.appendChild(script);
-
-    // Inject VPAIDCreative wrapper function
-    // Listen to mouse move/touch events
-    // Set player user Active
 }
+
+// Inject VPAIDCreative wrapper function
+// Listen to mouse move/touch events
+// Set player user Active
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class VPAIDWrapper implements iab.vpaid.VpaidCreative {

@@ -1,5 +1,5 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear, VastCreative } from 'vast-client';
+import { VastCreativeLinear, VastCreative, VastMediaFile, VastAd } from 'vast-client';
 
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
@@ -21,7 +21,13 @@ export interface BaseWithCreative {
     options: PrebidOutStreamPlugin.Options;
     player: VideoJsPlayer;
     logger: ILogger;
+    display: DisplayMedia;
+}
+
+interface DisplayMedia {
+    ad: VastAd;
     creative: VastCreativeLinear;
+    media: VastMediaFile;
 }
 
 // TODO
@@ -48,7 +54,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     captionsButton: true,
                     chaptersButton: false,
                     subtitlesButton: false,
-                    remainingTimeDisplay: false,
+                    remainingTimeDisplay: true,
                     progressControl: false,
                     fullscreenToggle: true,
                     playbackRateMenuButton: false,
@@ -91,16 +97,57 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 logger.debug('Vast parsed: ', response);
 
-                // Find creative to display
-                const creative = response.ads?.[0].creatives?.find((c) => this.isLinearCreative(c));
-                if (!this.isLinearCreative(creative)) {
-                    // non-linear creative
-                    return;
+                if (!response.ads) {
+                    throw new Error('no ads found in vast');
                 }
 
-                logger.debug('Loading creative: ', creative);
+                // Find linear creative from ads to display
+                let display: DisplayMedia | Record<string, never> = {};
+                for (const ad of response.ads) {
+                    if (!ad.creatives) {
+                        continue;
+                    }
 
-                const propsWithCreative = { ...props, creative };
+                    for (const creative of ad.creatives) {
+                        if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
+                            continue;
+                        }
+
+                        // Sort mediafiles by euclidean distance to player size
+                        const media = creative.mediaFiles
+                            .sort((a, b) => {
+                                const distanceA = Math.hypot(
+                                    a.width - this.player.width(),
+                                    a.height - this.player.height()
+                                );
+                                const distanceB = Math.hypot(
+                                    b.width - this.player.width(),
+                                    b.height - this.player.height()
+                                );
+                                return distanceA - distanceB;
+                            })
+                            .find((m) => m.mimeType !== 'video/x-flv');
+
+                        if (media) {
+                            display = {
+                                ad,
+                                creative,
+                                media,
+                            };
+
+                            break;
+                        }
+                    }
+                }
+
+                if (!display.media) {
+                    throw new Error('no suitable media found in vast');
+                }
+
+                logger.debug('Loading creative: ', display.creative);
+                logger.debug('Loading media: ', display.media);
+
+                const propsWithCreative: BaseWithCreative = { ...props, display: display as DisplayMedia };
 
                 // Hide each control element except for the ones selected in the adControls
                 // options
@@ -113,16 +160,13 @@ export default function register(vjs: typeof videojs = videojs) {
                 });
 
                 // Check for VPAID
-                if (
-                    creative.apiFramework === 'VPAID' ||
-                    creative.mediaFiles.some((media) => media.apiFramework === 'VPAID')
-                ) {
+                if (display.creative.apiFramework === 'VPAID' || display.media.apiFramework === 'VPAID') {
                     displayVPAID(propsWithCreative);
                 } else {
                     displayVASTNative(propsWithCreative);
                 }
 
-                const tracker = createTracker({ ...propsWithCreative, ad: response.ads[0] });
+                const tracker = createTracker(propsWithCreative);
 
                 // Setup close button functionality
                 if (this.options.showClose) {
@@ -139,7 +183,7 @@ export default function register(vjs: typeof videojs = videojs) {
                 }
 
                 // Setup clickthrough tracking and functionality
-                if (creative.videoClickThroughURLTemplate?.url) {
+                if (display.creative.videoClickThroughURLTemplate?.url) {
                     // Use mouseup and touchend event because
                     // 1. mouseup event changes player pause state when clicking on video
                     // 2. touch events are blocked for mobile: https://github.com/videojs/video.js/blob/main/src/js/player.js#L2044
@@ -177,6 +221,8 @@ export default function register(vjs: typeof videojs = videojs) {
                 );
             } catch (e) {
                 logger.error('Exception caught: ', e);
+                // trigger ad error
+                // Flow into player error
             }
         }
 
