@@ -1,11 +1,12 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear, VastCreative, VastMediaFile, VastAd } from 'vast-client';
+import { VastCreativeLinear, VastCreative, VastMediaFile, VastAd, VASTTracker } from 'vast-client';
 
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
 import { getLogger, ILogger } from './logger';
 import CloseComponent from './component/close';
 import { createTracker } from './tracker';
+import VastError, { LINEAR_ERROR, VAST_NO_ADS } from './errors';
 
 import './index.css';
 
@@ -31,7 +32,6 @@ interface DisplayMedia {
 }
 
 // TODO
-// Add logger for debug option
 // When destroyed, clear all listeners on window
 // When destroyed, clear vpaid container
 export default function register(vjs: typeof videojs = videojs) {
@@ -79,6 +79,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     debug: false,
                     useVPAID: true,
                     showClose: true,
+                    minVPAIDAdStart: 5000,
                 },
                 ...options,
                 ...{ adControls },
@@ -91,14 +92,18 @@ export default function register(vjs: typeof videojs = videojs) {
             const logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
             logger.debug('Initialize plugin with options', this.options);
 
+            let tracker: VASTTracker | undefined;
+
             try {
                 const props = { player: this.player, options: this.options, logger };
                 const response = await parseVAST(props);
 
+                // At this point, vast tracker should be reasonably instantiated
+
                 logger.debug('Vast parsed: ', response);
 
                 if (!response.ads) {
-                    throw new Error('no ads found in vast');
+                    throw new VastError(VAST_NO_ADS, 'no ads found in vast');
                 }
 
                 // Find linear creative from ads to display
@@ -141,13 +146,18 @@ export default function register(vjs: typeof videojs = videojs) {
                 }
 
                 if (!display.media) {
-                    throw new Error('no suitable media found in vast');
+                    throw new VastError(LINEAR_ERROR, 'no suitable media found in vast');
                 }
 
                 logger.debug('Loading creative: ', display.creative);
                 logger.debug('Loading media: ', display.media);
 
                 const propsWithCreative: BaseWithCreative = { ...props, display: display as DisplayMedia };
+
+                logger.debug('Setting up tracker...');
+                tracker = createTracker(propsWithCreative);
+
+                // TODO if the player fails to play ad source, forward error to tracker
 
                 // Hide each control element except for the ones selected in the adControls
                 // options
@@ -166,8 +176,6 @@ export default function register(vjs: typeof videojs = videojs) {
                     displayVASTNative(propsWithCreative);
                 }
 
-                const tracker = createTracker(propsWithCreative);
-
                 // Setup close button functionality
                 if (this.options.showClose) {
                     this.player.el().appendChild(
@@ -175,7 +183,7 @@ export default function register(vjs: typeof videojs = videojs) {
                             onClick: () => {
                                 logger.debug('Sending ad closed...');
                                 this.player.trigger('adclose');
-                                tracker.skip();
+                                tracker!.skip();
                                 // TODO: Unload ad
                             },
                         })
@@ -195,7 +203,7 @@ export default function register(vjs: typeof videojs = videojs) {
                                 if (elem.tagName === 'VIDEO' && !this.player.paused()) {
                                     logger.debug('Sending click event on video...');
                                     this.player.trigger('adclick');
-                                    tracker.click();
+                                    tracker!.click();
                                 }
                             },
                             { capture: true, passive: true }
@@ -221,8 +229,18 @@ export default function register(vjs: typeof videojs = videojs) {
                 );
             } catch (e) {
                 logger.error('Exception caught: ', e);
-                // trigger ad error
-                // Flow into player error
+                this.player.error(`POP: ${e.message}`);
+
+                if (e instanceof VastError) {
+                    // If tracker is defined fast-forward error to tracker
+                    if (tracker) {
+                        tracker.errorWithCode(e.vastErrorCode.toString());
+                    }
+                    this.player.trigger('aderror');
+                }
+
+                // Also trigger player error
+                this.player.trigger('error');
             }
         }
 

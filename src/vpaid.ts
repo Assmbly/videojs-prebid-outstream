@@ -1,18 +1,8 @@
-// Load vpaid
-// iframe.contentWindow.document.write('<script id="adloaderscript" src="' + url + '"></scr' + 'ipt>');
-// const script = iframe.contentWindow.document.querySelector('#adloaderscript')
-// script.onload = function() {
-// iframe.contentWindow['getVPAIDAd'] will be available here
-//    var fn = iframe.contentWindow['getVPAIDAd'];
-//    if (fn && typeof fn == 'function') {
-//    VPAIDCreative = fn();
-//    }
-//}
-
 import { VideoJsPlayer } from 'video.js';
 import { VastCreativeLinear } from 'vast-client';
 
 import { BaseWithCreative } from './index';
+import VastError, { VPAID_ERROR } from './errors';
 
 const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     NORMAL: 'normal',
@@ -20,7 +10,7 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
-export function displayVPAID({ player, logger, display: { creative, media } }: BaseWithCreative) {
+export function displayVPAID({ player, logger, options, display: { creative, media } }: BaseWithCreative) {
     logger.debug('Displaying VPAID...');
 
     const container = document.createElement('div');
@@ -37,6 +27,23 @@ export function displayVPAID({ player, logger, display: { creative, media } }: B
         // Unable to write iframe
         return;
     }
+
+    // Failsafe to check if VPAID loaded and video played
+    const startVPAIDTimeout = setTimeout(() => {
+        if (player && player.paused()) {
+            throw new VastError(VPAID_ERROR, 'VPAID is not playing');
+        }
+    }, options.minVPAIDAdStart);
+
+    player.on('dispose', () => {
+        clearTimeout(startVPAIDTimeout);
+    });
+
+    iframe.contentWindow!.onerror = (e) => {
+        const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
+        throw new VastError(VPAID_ERROR, message);
+    };
+
     const script = iframeDoc.createElement('script');
 
     script.src = media.fileURL || '';
@@ -44,9 +51,7 @@ export function displayVPAID({ player, logger, display: { creative, media } }: B
         logger.debug('VPAID script has loaded...');
         const adunit = iframe.contentWindow?.getVPAIDAd?.();
         if (!adunit) {
-            // no adunit found
-            logger.error('no VPAID adunit found...');
-            return;
+            throw new Error('no VPAID adunit found');
         }
 
         logger.debug('Initializing VPAID adunit...');
