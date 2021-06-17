@@ -1399,22 +1399,22 @@ function createTracker({ player, logger, display: { creative, ad } }) {
     }
     canplay = true;
     logger.debug("Sending tracking impression...");
-    player.trigger("adimpression");
+    player.trigger("adImpression");
     tracker.trackImpression();
   });
   tracker.on("creativeView", () => {
-    player.trigger("adimpressionsent");
+    player.trigger("adImpressionSent");
   });
   player.on("ended", () => {
     if (!canplay) {
       return;
     }
     logger.debug("Sending tracking complete...");
-    player.trigger("adcomplete");
+    player.trigger("adComplete");
     tracker.complete();
   });
   tracker.on("complete", () => {
-    player.trigger("adcompletesent");
+    player.trigger("adCompleteSent");
   });
   player.on("timeupdate", () => {
     tracker.setProgress(player.currentTime());
@@ -1441,10 +1441,10 @@ function createTracker({ player, logger, display: { creative, ad } }) {
     tracker.setPaused(true);
   });
   tracker.on("skip", () => {
-    player.trigger("adskipsent");
+    player.trigger("adSkipSent");
   });
   tracker.on("clickthrough", (url) => {
-    player.trigger("adclicksent");
+    player.trigger("adClickSent");
     window.open(url, "_blank");
   });
   return tracker;
@@ -1553,7 +1553,7 @@ function register(vjs = import_video.default) {
             this.player.el().appendChild(CloseComponent({
               onClick: () => {
                 logger.debug("Sending ad closed...");
-                this.player.trigger("adclose");
+                this.player.trigger("adClose");
                 tracker.skip();
               }
             }));
@@ -1564,7 +1564,7 @@ function register(vjs = import_video.default) {
                 const elem = e.target;
                 if (elem.tagName === "VIDEO" && !this.player.paused()) {
                   logger.debug("Sending click event on video...");
-                  this.player.trigger("adclick");
+                  this.player.trigger("adClick");
                   tracker.click();
                 }
               }, { capture: true, passive: true });
@@ -1587,7 +1587,7 @@ function register(vjs = import_video.default) {
             if (tracker) {
               tracker.errorWithCode(e.vastErrorCode.toString());
             }
-            this.player.trigger("aderror");
+            this.player.trigger("adError");
           }
           this.player.trigger("error");
         }
