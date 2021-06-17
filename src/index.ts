@@ -183,7 +183,7 @@ export default function register(vjs: typeof videojs = videojs) {
                         CloseComponent({
                             onClick: () => {
                                 logger.debug('Sending ad closed...');
-                                this.player.trigger('adclose');
+                                this.player.trigger('adClose');
                                 tracker!.skip();
                                 // TODO: Unload ad
                             },
@@ -203,7 +203,7 @@ export default function register(vjs: typeof videojs = videojs) {
                                 const elem = e.target as HTMLElement;
                                 if (elem.tagName === 'VIDEO' && !this.player.paused()) {
                                     logger.debug('Sending click event on video...');
-                                    this.player.trigger('adclick');
+                                    this.player.trigger('adClick');
                                     tracker!.click();
                                 }
                             },
@@ -237,7 +237,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     if (tracker) {
                         tracker.errorWithCode(e.vastErrorCode.toString());
                     }
-                    this.player.trigger('aderror');
+                    this.player.trigger('adError');
                 }
 
                 // Also trigger player error

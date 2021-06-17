@@ -14,12 +14,12 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
 
         canplay = true;
         logger.debug('Sending tracking impression...');
-        player.trigger('adimpression');
+        player.trigger('adImpression');
         tracker.trackImpression();
     });
 
     tracker.on('creativeView', () => {
-        player.trigger('adimpressionsent');
+        player.trigger('adImpressionSent');
     });
 
     player.on('ended', () => {
@@ -28,12 +28,12 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
         }
 
         logger.debug('Sending tracking complete...');
-        player.trigger('adcomplete');
+        player.trigger('adComplete');
         tracker.complete();
     });
 
     tracker.on('complete', () => {
-        player.trigger('adcompletesent');
+        player.trigger('adCompleteSent');
     });
 
     player.on('timeupdate', () => {
@@ -68,11 +68,11 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
     });
 
     tracker.on('skip', () => {
-        player.trigger('adskipsent');
+        player.trigger('adSkipSent');
     });
 
     tracker.on('clickthrough', (url) => {
-        player.trigger('adclicksent');
+        player.trigger('adClickSent');
         window.open(url, '_blank');
     });
 
