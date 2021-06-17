@@ -1216,11 +1216,9 @@ var VIEW_MODE = {
 };
 function displayVPAID({ player, logger, options, display: { creative, media } }) {
   logger.debug("Displaying VPAID...");
-  const container = document.createElement("div");
-  player.el().appendChild(container);
   const iframe = document.createElement("iframe");
   iframe.id = `${creative.id}_${Date.now()}`;
-  iframe.style.cssText = "margin:0;border:0;";
+  iframe.style.cssText = `margin:0;border:0;width:${player.width()}px;height:${player.height()}px`;
   player.el().appendChild(iframe);
   const iframeDoc = iframe.contentDocument;
   if (!iframeDoc) {
@@ -1252,7 +1250,7 @@ function displayVPAID({ player, logger, options, display: { creative, media } })
     wrapper.registerCallbacks();
     logger.debug("Initializing VPAID adunit...");
     adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
-      slot: container,
+      slot: iframeDoc.body,
       videoSlot: player.tech({ ignoreWarning: true }).el(),
       videoSlotCanAutoPlay: !!player.autoplay()
     });

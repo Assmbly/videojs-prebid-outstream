@@ -10,12 +10,9 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
 export function displayVPAID({ player, logger, options, display: { creative, media } }: BaseWithCreative) {
     logger.debug('Displaying VPAID...');
 
-    const container = document.createElement('div');
-    player.el().appendChild(container);
-
     const iframe = document.createElement('iframe');
     iframe.id = `${creative.id}_${Date.now()}`;
-    iframe.style.cssText = 'margin:0;border:0;';
+    iframe.style.cssText = `margin:0;border:0;width:${player.width()}px;height:${player.height()}px`;
     player.el().appendChild(iframe);
 
     // Add script to post ready message
@@ -63,7 +60,7 @@ export function displayVPAID({ player, logger, options, display: { creative, med
             media.bitrate,
             { AdParameters: creative.adParameters || '' },
             {
-                slot: container,
+                slot: iframeDoc.body,
                 videoSlot: player.tech({ ignoreWarning: true }).el() as HTMLVideoElement,
                 videoSlotCanAutoPlay: !!player.autoplay(),
             }
