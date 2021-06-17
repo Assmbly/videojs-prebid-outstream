@@ -1,0 +1,28 @@
+/* src/index.css */
+.vjs-control-bar {
+  justify-content: space-between;
+}
+.vjs-pop-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 3em;
+  height: 3em;
+}
+.vjs-pop-close::before {
+  content: "+";
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 2.5em;
+  display: inline-block;
+  height: 100%;
+  width: 100%;
+  line-height: normal;
+  vertical-align: middle;
+  text-align: center;
+  transform: rotate(45deg);
+}
+.vjs-pop-close:hover {
+  cursor: pointer;
+  background-color: #2B333F;
+  background-color: rgba(43, 51, 63, 0.7);
+}

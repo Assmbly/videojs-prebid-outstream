@@ -1,2 +1,2 @@
 import { BaseWithCreative } from './index';
-export declare function displayVPAID({ player, creative, logger }: BaseWithCreative): void;
+export declare function displayVPAID({ player, logger, options, display: { creative, media } }: BaseWithCreative): void;
