@@ -25,7 +25,34 @@ export declare const COMPANION_RESOURCE_NOT_FOUND = 603;
 export declare const COMPANION_NOT_SUPPORTED = 604;
 export declare const UNDEFINED_ERROR = 900;
 export declare const VPAID_ERROR = 901;
-declare type VastErrorCode = 100 | 101 | 102 | 200 | 201 | 202 | 203 | 300 | 301 | 302 | 303 | 400 | 401 | 402 | 403 | 405 | 500 | 501 | 502 | 503 | 600 | 601 | 602 | 603 | 604 | 900 | 901;
+declare type VastErrorCode =
+    | 100
+    | 101
+    | 102
+    | 200
+    | 201
+    | 202
+    | 203
+    | 300
+    | 301
+    | 302
+    | 303
+    | 400
+    | 401
+    | 402
+    | 403
+    | 405
+    | 500
+    | 501
+    | 502
+    | 503
+    | 600
+    | 601
+    | 602
+    | 603
+    | 604
+    | 900
+    | 901;
 export default class VastError extends Error {
     readonly vastErrorCode: VastErrorCode;
     readonly message: string;
