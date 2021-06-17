@@ -79,6 +79,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     debug: false,
                     useVPAID: true,
                     showClose: true,
+                    resolveAll: false, // Defaults parsing to the first ad in vast only
                     minVPAIDAdStart: 5000,
                 },
                 ...options,
