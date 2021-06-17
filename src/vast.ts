@@ -15,8 +15,6 @@ function isVastURLOption(options?: PrebidOutStreamPlugin.Options): options is Pr
 export async function parseVAST({ logger, options }: BaseProps): Promise<VastResponse> {
     logger.debug('Starting to parse vast...');
 
-    // TODO switch to VASTClient as it is preferred to reduce requests
-    // when resolving vast wrappers
     const vp = new VASTParser();
     vp.on('VAST-error', ({ ERRORCODE, ERRORMESSAGE }) => {
         // Note: These errors are automatically sent to the corresponding tracking
