@@ -228,6 +228,22 @@ export default function register(vjs: typeof videojs = videojs) {
                     },
                     { capture: true, passive: true }
                 );
+
+                // Listen on the window to determine if the current player should continue playing when
+                // the document is in view again
+                window.addEventListener('visibilitychange', () => {
+                    const playerLocation = this.player.el().getBoundingClientRect();
+                    const isPlayerVisible =
+                        playerLocation.top >= 0 &&
+                        playerLocation.left >= 0 &&
+                        playerLocation.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        playerLocation.right <= (window.innerWidth || document.documentElement.clientWidth);
+
+                    if (isPlayerVisible && !document.hidden && this.player.paused()) {
+                        // TODO Silence "uncaught play promise" error messages
+                        this.player.play();
+                    }
+                });
             } catch (e) {
                 logger.error('Exception caught: ', e);
                 this.player.error(`POP: ${e.message}`);
