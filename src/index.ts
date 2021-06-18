@@ -231,18 +231,9 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 // Listen on the window to determine if the current player should continue playing when
                 // the document is in view again
-                window.addEventListener('visibilitychange', () => {
-                    const playerLocation = this.player.el().getBoundingClientRect();
-                    const isPlayerVisible =
-                        playerLocation.top >= 0 &&
-                        playerLocation.left >= 0 &&
-                        playerLocation.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        playerLocation.right <= (window.innerWidth || document.documentElement.clientWidth);
-
-                    if (isPlayerVisible && !document.hidden && this.player.paused()) {
-                        // TODO Silence "uncaught play promise" error messages
-                        this.player.play();
-                    }
+                window.addEventListener('visibilitychange', this.returnToPagePlay);
+                this.player.on('dispose', () => {
+                    window.removeEventListener('visibilitychange', this.returnToPagePlay);
                 });
             } catch (e) {
                 logger.error('Exception caught: ', e);
@@ -258,6 +249,20 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 // Also trigger player error
                 this.player.trigger('error');
+            }
+        }
+
+        returnToPagePlay() {
+            const playerLocation = this.player.el().getBoundingClientRect();
+            const isPlayerVisible =
+                playerLocation.top >= 0 &&
+                playerLocation.left >= 0 &&
+                playerLocation.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                playerLocation.right <= (window.innerWidth || document.documentElement.clientWidth);
+
+            if (isPlayerVisible && !document.hidden && this.player.paused()) {
+                // TODO Silence "uncaught play promise" error messages
+                this.player.play();
             }
         }
 
