@@ -67,8 +67,8 @@ The plugin uses https://github.com/dailymotion/vast-client-js as the vast parser
 | adControls.remainingTimeDisplay   | boolean              | true      |                    | Shows remaining time for ad                                                                       |
 | adControls.progressControl        | boolean              | false     |                    | Allows ad seeking, control over ad progress                                                       |
 | adControls.fullscreenToggle       | boolean              | false     |                    | Shows fullscreen button                                                                           |
-| adControls.playbackRateMenuButton | boolean              |           | false              | Shows bitrate change button                                                                       |
-| adControls.pictureInPictureToggle | boolean              |           | false              | Shows picture in picture button                                                                   |
+| adControls.playbackRateMenuButton | boolean              | false     |                    | Shows bitrate change button                                                                       |
+| adControls.pictureInPictureToggle | boolean              | false     |                    | Shows picture in picture button                                                                   |
 | adControls.currentTimeDisplay     | boolean              | false     |                    | Shows current time in video                                                                       |
 | adControls.currentTimeDisplay     | boolean              | false     |                    | Shows current time in video                                                                       |
 | adControls.timeDivider            | boolean              | false     |                    | Shows time divider                                                                                |
