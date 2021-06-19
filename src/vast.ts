@@ -2,7 +2,7 @@ import videojs from 'video.js';
 import { VASTParser, VastResponse } from 'vast-client';
 
 import VastError from './errors';
-import { BaseProps, BaseWithCreative } from './index';
+import { BaseProps, BaseWithCreativeAndTracker } from './index';
 
 function isVastXMLOption(options?: PrebidOutStreamPlugin.Options): options is PrebidOutStreamPlugin.VastXMLOptions {
     return !!(options as any)?.adXml;
@@ -36,8 +36,13 @@ export async function parseVAST({ logger, options }: BaseProps): Promise<VastRes
     throw new Error('no vast provided in options');
 }
 
-export function displayVASTNative({ player, logger, display: { media } }: BaseWithCreative) {
+export function displayVASTNative({ player, logger, display: { media }, tracker }: BaseWithCreativeAndTracker) {
     logger.debug('Displaying native VAST...');
+
+    // Bind click tracking for VAST native
+    tracker.on('clickthrough', (url) => {
+        window.open(url, '_blank');
+    });
 
     const source: videojs.Tech.SourceObject = {
         src: media.fileURL || '',

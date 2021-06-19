@@ -1,4 +1,6 @@
-import { BaseWithCreative } from './index';
+import { VASTTracker } from 'vast-client';
+
+import { BaseWithCreativeAndTracker } from './index';
 import VastError, { VPAID_ERROR } from './errors';
 
 const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
@@ -7,7 +9,13 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
-export function displayVPAID({ player, logger, options, display: { creative, media } }: BaseWithCreative) {
+export function displayVPAID({
+    player,
+    logger,
+    options,
+    display: { creative, media },
+    tracker,
+}: BaseWithCreativeAndTracker) {
     logger.debug('Displaying VPAID...');
 
     const iframe = document.createElement('iframe');
@@ -49,7 +57,7 @@ export function displayVPAID({ player, logger, options, display: { creative, med
         }
 
         logger.debug('Subscribing to VPAID adunit events');
-        const wrapper = new VPAIDWrapper(adunit);
+        const wrapper = new VPAIDWrapper(adunit, tracker);
         wrapper.registerCallbacks();
 
         logger.debug('Initializing VPAID adunit...');
@@ -84,7 +92,7 @@ class VPAIDWrapper {
         AdRemainingTimeChange: this.dummy,
         AdVolumeChange: this.dummy,
         AdImpression: this.dummy,
-        AdClickThru: this.dummy,
+        AdClickThru: this.onAdClickThru,
         AdInteraction: this.dummy,
         AdVideoStart: this.dummy,
         AdVideoFirstQuartile: this.dummy,
@@ -100,7 +108,7 @@ class VPAIDWrapper {
         AdLog: this.dummy,
     };
 
-    constructor(readonly adunit: iab.vpaid.VpaidCreative) {}
+    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker) {}
 
     registerCallbacks() {
         if (typeof this.adunit.subscribe === 'function') {
@@ -109,6 +117,21 @@ class VPAIDWrapper {
                 const eventName = name as iab.vpaid.EventsNames;
                 this.adunit.subscribe(this.callbacks[eventName], eventName);
             });
+        }
+    }
+
+    onAdClickThru(url: string, _id: string, playerHandles: boolean) {
+        if (playerHandles && !url) {
+            // Use vast click url
+            this.tracker.on('clickthrough', (mUrl) => {
+                window.open(mUrl, '_blank');
+            });
+        }
+
+        this.tracker.click();
+
+        if (url) {
+            window.open(url, '_blank');
         }
     }
 
