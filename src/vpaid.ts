@@ -27,7 +27,7 @@ export function displayVPAID({ player, logger, options, display: { creative, med
         if (player && player.paused()) {
             throw new VastError(VPAID_ERROR, 'VPAID is not playing');
         }
-    }, options.minVPAIDAdStart);
+    }, options.maxVPAIDAdStart);
 
     player.on('dispose', () => {
         clearTimeout(startVPAIDTimeout);
