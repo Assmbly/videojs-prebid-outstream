@@ -121,6 +121,8 @@ class VPAIDWrapper {
     }
 
     onAdClickThru(url: string, _id: string, playerHandles: boolean) {
+        // It is already clicked here....
+        console.debug(url, _id, playerHandles);
         if (playerHandles && !url) {
             // Use vast click url
             this.tracker.on('clickthrough', (mUrl) => {
