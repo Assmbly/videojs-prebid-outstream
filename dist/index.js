@@ -1228,7 +1228,7 @@ function displayVPAID({ player, logger, options, display: { creative, media } })
     if (player && player.paused()) {
       throw new VastError(VPAID_ERROR, "VPAID is not playing");
     }
-  }, options.minVPAIDAdStart);
+  }, options.maxVPAIDAdStart);
   player.on("dispose", () => {
     clearTimeout(startVPAIDTimeout);
   });
@@ -1456,6 +1456,18 @@ function register(vjs = import_video.default) {
       super(player, options);
       __publicField(this, "player");
       __publicField(this, "options");
+      __publicField(this, "onVisibilityChange", () => {
+        const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+        const playerLocation = this.player.el().getBoundingClientRect();
+        const isPlayerVisible = playerLocation.top >= 0 && playerLocation.left >= windowWidth - this.player.width() && playerLocation.bottom <= windowHeight && playerLocation.right <= windowWidth;
+        if (isPlayerVisible && !document.hidden && this.player.paused()) {
+          this.player.play();
+        }
+        if (document.hidden) {
+          this.player.pause();
+        }
+      });
       this.player = player;
       const adControls = __spreadValues(__spreadValues({}, {
         volumePanel: true,
@@ -1485,7 +1497,7 @@ function register(vjs = import_video.default) {
         useVPAID: true,
         showClose: true,
         resolveAll: false,
-        minVPAIDAdStart: 5e3
+        maxVPAIDAdStart: 5e3
       }), options), { adControls });
       this.setup();
     }
@@ -1560,7 +1572,7 @@ function register(vjs = import_video.default) {
             ["mouseup", "touchend"].forEach((eventName) => {
               this.player.el().addEventListener(eventName, (e) => {
                 const elem = e.target;
-                if (elem.tagName === "VIDEO" && !this.player.paused()) {
+                if (elem.tagName === "VIDEO") {
                   logger.debug("Sending click event on video...");
                   this.player.trigger("adClick");
                   tracker.click();
@@ -1568,16 +1580,10 @@ function register(vjs = import_video.default) {
               }, { capture: true, passive: true });
             });
           }
-          this.player.el().addEventListener("touchend", (e) => {
-            const elem = e.target;
-            if (elem.tagName === "VIDEO") {
-              if (this.player.paused()) {
-                this.player.play();
-              } else {
-                this.player.pause();
-              }
-            }
-          }, { capture: true, passive: true });
+          window.addEventListener("visibilitychange", this.onVisibilityChange);
+          this.player.on("dispose", () => {
+            window.removeEventListener("visibilitychange", this.onVisibilityChange);
+          });
         } catch (e) {
           logger.error("Exception caught: ", e);
           this.player.error(`POP: ${e.message}`);
