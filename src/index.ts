@@ -201,7 +201,7 @@ export default function register(vjs: typeof videojs = videojs) {
                             eventName,
                             (e) => {
                                 const elem = e.target as HTMLElement;
-                                if (elem.tagName === 'VIDEO' && !this.player.paused()) {
+                                if (elem.tagName === 'VIDEO') {
                                     logger.debug('Sending click event on video...');
                                     this.player.trigger('adClick');
                                     tracker!.click();
@@ -212,22 +212,12 @@ export default function register(vjs: typeof videojs = videojs) {
                     });
                 }
 
-                // Replicate big play button capabilities for mobile
-                this.player.el().addEventListener(
-                    'touchend',
-                    (e) => {
-                        const elem = e.target as HTMLElement;
-                        if (elem.tagName === 'VIDEO') {
-                            if (this.player.paused()) {
-                                // TODO Silence "uncaught play promise" error messages
-                                this.player.play();
-                            } else {
-                                this.player.pause();
-                            }
-                        }
-                    },
-                    { capture: true, passive: true }
-                );
+                // Listen on the window to determine if the current player should continue playing when
+                // the document is in view again
+                window.addEventListener('visibilitychange', this.onVisibilityChange);
+                this.player.on('dispose', () => {
+                    window.removeEventListener('visibilitychange', this.onVisibilityChange);
+                });
             } catch (e) {
                 logger.error('Exception caught: ', e);
                 this.player.error(`POP: ${e.message}`);
@@ -244,6 +234,27 @@ export default function register(vjs: typeof videojs = videojs) {
                 this.player.trigger('error');
             }
         }
+
+        onVisibilityChange = () => {
+            const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+            const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+
+            const playerLocation = this.player.el().getBoundingClientRect();
+            const isPlayerVisible =
+                playerLocation.top >= 0 &&
+                playerLocation.left >= windowWidth - this.player.width() &&
+                playerLocation.bottom <= windowHeight &&
+                playerLocation.right <= windowWidth;
+
+            if (isPlayerVisible && !document.hidden && this.player.paused()) {
+                // TODO Silence "uncaught play promise" error messages
+                this.player.play();
+            }
+
+            if (document.hidden) {
+                this.player.pause();
+            }
+        };
 
         isLinearCreative(creative?: VastCreative): creative is VastCreativeLinear {
             return creative?.type === 'linear';
