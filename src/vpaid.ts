@@ -129,16 +129,28 @@ class VPAIDWrapper {
     }
 
     onAdClickThru = (url: string, _id: string, playerHandles: boolean) => {
-        console.debug('ad clicked', url, _id, playerHandles);
-        if (playerHandles && !url) {
-            // Use vast click url
+        // The creative should provide click through handling
+        // However, the player must still send the tracking to the VAST
+        // ClickTracking and VideoClicks elements
+        if (!playerHandles) {
+            this.tracker.click();
+            return;
+        }
+
+        // Player is handling the clickthrough now
+        // If url is NOT defined, then
+        // video player must use the VAST element VideoClicks/ClickThrough
+        if (!url) {
             this.tracker.on('clickthrough', (mUrl) => {
                 window.open(mUrl, '_blank');
             });
         }
 
+        // Handler should be defined before click is sent through for tracking
         this.tracker.click();
 
+        // URL is optional, if it is defined then the player should open
+        // the URL
         if (url) {
             window.open(url, '_blank');
         }
