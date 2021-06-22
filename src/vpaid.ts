@@ -35,9 +35,15 @@ export function displayVPAID({
         if (player && player.paused()) {
             throw new VastError(VPAID_ERROR, 'VPAID is not playing');
         }
-    }, options.minVPAIDAdStart);
+    }, options.maxVPAIDAdStart);
 
     player.on('dispose', () => {
+        clearTimeout(startVPAIDTimeout);
+    });
+
+    // Clear timeout if creative is playing so that it can pause
+    // without error
+    tracker.on('creativeView', () => {
         clearTimeout(startVPAIDTimeout);
     });
 

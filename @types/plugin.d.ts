@@ -10,7 +10,7 @@ declare namespace PrebidOutStreamPlugin {
         debug?: boolean;
         useVPAID?: boolean;
         showClose?: boolean;
-        minVPAIDAdStart?: number;
+        maxVPAIDAdStart?: number;
     }
 
     export interface VastURLOptions extends PluginOptions {
@@ -21,12 +21,3 @@ declare namespace PrebidOutStreamPlugin {
         adXml: string;
     }
 }
-
-//VastRequestOptions
-//     timeout?: number; default 0
-//     withCredentials?: boolean; default false
-//     wrapperLimit?: number; default 0
-//     urlHandler?: VASTClientUrlHandler; default undefined
-//     resolveAll?: boolean; default true
-//     allowMultipleAds: boolean
-//     followAdditionalWrappers: boolean
