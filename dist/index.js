@@ -1225,7 +1225,6 @@ function displayVPAID({ player, logger, options, display: { creative, media } },
     return;
   }
   const startVPAIDTimeout = setTimeout(() => {
-    console.debug("handler running");
     if (player && player.paused()) {
       throw new VastError(VPAID_ERROR, "VPAID is not playing");
     }
@@ -1234,7 +1233,6 @@ function displayVPAID({ player, logger, options, display: { creative, media } },
     clearTimeout(startVPAIDTimeout);
   });
   tracker.on("creativeView", () => {
-    console.debug("clear timeout");
     clearTimeout(startVPAIDTimeout);
   });
   iframe.contentWindow.onerror = (e) => {
