@@ -1,6 +1,6 @@
 import { VASTTracker } from 'vast-client';
 
-import { BaseWithCreative } from './index';
+import { BaseWithCreativeAndTracker } from './index';
 import VastError, { VPAID_ERROR } from './errors';
 
 const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
@@ -9,15 +9,18 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
-export function displayVPAID(
-    { player, logger, options, display: { creative, media } }: BaseWithCreative,
-    tracker: VASTTracker
-) {
+export function displayVPAID({
+    player,
+    logger,
+    options,
+    display: { creative, media },
+    tracker,
+}: BaseWithCreativeAndTracker) {
     logger.debug('Displaying VPAID...');
 
     const iframe = document.createElement('iframe');
     iframe.id = `${creative.id}_${Date.now()}`;
-    iframe.style.cssText = `margin:0;border:0;width:${player.width()}px;height:${player.height()}px`;
+    iframe.className = 'vjs-pop-vpaid-container';
     player.el().appendChild(iframe);
 
     // Add script to post ready message
@@ -60,7 +63,7 @@ export function displayVPAID(
         }
 
         logger.debug('Subscribing to VPAID adunit events');
-        const wrapper = new VPAIDWrapper(adunit);
+        const wrapper = new VPAIDWrapper(adunit, tracker);
         wrapper.registerCallbacks();
 
         logger.debug('Initializing VPAID adunit...');
@@ -82,36 +85,38 @@ export function displayVPAID(
 }
 
 class VPAIDWrapper {
-    private callbacks: iab.vpaid.EventsMap = {
-        AdStarted: this.dummy,
-        AdStopped: this.dummy,
-        AdSkipped: this.dummy,
-        AdLoaded: this.dummy,
-        AdLinearChange: this.dummy,
-        AdSizeChange: this.dummy,
-        AdExpandedChange: this.dummy,
-        AdSkippableStateChange: this.dummy,
-        AdDurationChange: this.dummy,
-        AdRemainingTimeChange: this.dummy,
-        AdVolumeChange: this.dummy,
-        AdImpression: this.dummy,
-        AdClickThru: this.dummy,
-        AdInteraction: this.dummy,
-        AdVideoStart: this.dummy,
-        AdVideoFirstQuartile: this.dummy,
-        AdVideoMidpoint: this.dummy,
-        AdVideoThirdQuartile: this.dummy,
-        AdVideoComplete: this.dummy,
-        AdUserAcceptInvitation: this.dummy,
-        AdUserMinimize: this.dummy,
-        AdUserClose: this.dummy,
-        AdPaused: this.dummy,
-        AdPlaying: this.dummy,
-        AdError: this.dummy,
-        AdLog: this.dummy,
-    };
+    private callbacks: iab.vpaid.EventsMap;
 
-    constructor(readonly adunit: iab.vpaid.VpaidCreative) {}
+    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker) {
+        this.callbacks = {
+            AdStarted: this.dummy,
+            AdStopped: this.dummy,
+            AdSkipped: this.dummy,
+            AdLoaded: this.dummy,
+            AdLinearChange: this.dummy,
+            AdSizeChange: this.dummy,
+            AdExpandedChange: this.dummy,
+            AdSkippableStateChange: this.dummy,
+            AdDurationChange: this.dummy,
+            AdRemainingTimeChange: this.dummy,
+            AdVolumeChange: this.dummy,
+            AdImpression: this.dummy,
+            AdClickThru: this.onAdClickThru,
+            AdInteraction: this.dummy,
+            AdVideoStart: this.dummy,
+            AdVideoFirstQuartile: this.dummy,
+            AdVideoMidpoint: this.dummy,
+            AdVideoThirdQuartile: this.dummy,
+            AdVideoComplete: this.dummy,
+            AdUserAcceptInvitation: this.dummy,
+            AdUserMinimize: this.dummy,
+            AdUserClose: this.dummy,
+            AdPaused: this.dummy,
+            AdPlaying: this.dummy,
+            AdError: this.dummy,
+            AdLog: this.dummy,
+        };
+    }
 
     registerCallbacks() {
         if (typeof this.adunit.subscribe === 'function') {
@@ -123,8 +128,36 @@ class VPAIDWrapper {
         }
     }
 
-    dummy() {
+    onAdClickThru = (url: string, _id: string, playerHandles: boolean) => {
+        // The creative should provide click through handling
+        // However, the player must still send the tracking to the VAST
+        // ClickTracking and VideoClicks elements
+        if (!playerHandles) {
+            this.tracker.click();
+            return;
+        }
+
+        // Player is handling the clickthrough now
+        // If url is NOT defined, then
+        // video player must use the VAST element VideoClicks/ClickThrough
+        if (!url) {
+            this.tracker.on('clickthrough', (mUrl) => {
+                window.open(mUrl, '_blank');
+            });
+        }
+
+        // Handler should be defined before click is sent through for tracking
+        this.tracker.click();
+
+        // URL is optional, if it is defined then the player should open
+        // the URL
+        if (url) {
+            window.open(url, '_blank');
+        }
+    };
+
+    dummy = () => {
         // Dummy method to squelch errors from callbacks not found
         // See https://github.com/redbrickmedia/videojs-prebid-outstream/pull/16
-    }
+    };
 }

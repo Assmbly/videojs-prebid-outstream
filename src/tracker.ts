@@ -71,9 +71,9 @@ export function createTracker({ player, logger, display: { creative, ad } }: Bas
         player.trigger('adSkipSent');
     });
 
-    tracker.on('clickthrough', (url) => {
+    tracker.on('clickthrough', () => {
+        logger.debug('Clickthrough tracking sent...');
         player.trigger('adClickSent');
-        window.open(url, '_blank');
     });
 
     return tracker;

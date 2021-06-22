@@ -18,11 +18,12 @@ export interface BaseProps {
     logger: ILogger;
 }
 
-export interface BaseWithCreative {
-    options: PrebidOutStreamPlugin.Options;
-    player: VideoJsPlayer;
-    logger: ILogger;
+export interface BaseWithCreative extends BaseProps {
     display: DisplayMedia;
+}
+
+export interface BaseWithCreativeAndTracker extends BaseWithCreative {
+    tracker: VASTTracker;
 }
 
 interface DisplayMedia {
@@ -172,9 +173,9 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 // Check for VPAID
                 if (display.creative.apiFramework === 'VPAID' || display.media.apiFramework === 'VPAID') {
-                    displayVPAID(propsWithCreative, tracker);
+                    displayVPAID({ ...propsWithCreative, tracker });
                 } else {
-                    displayVASTNative(propsWithCreative);
+                    displayVASTNative({ ...propsWithCreative, tracker });
                 }
 
                 // Setup close button functionality
