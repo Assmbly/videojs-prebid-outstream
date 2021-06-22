@@ -17,6 +17,7 @@ export function displayVPAID({
     tracker,
 }: BaseWithCreativeAndTracker) {
     logger.debug('Displaying VPAID...');
+    player.trigger('adVPAIDSelected');
 
     const iframe = document.createElement('iframe');
     iframe.id = `${creative.id}_${Date.now()}`;
