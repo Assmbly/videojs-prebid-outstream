@@ -1214,11 +1214,17 @@ var VIEW_MODE = {
   FULLSCREEN: "fullscreen",
   THUMBNAIL: "thumbnail"
 };
-function displayVPAID({ player, logger, options, display: { creative, media } }, tracker) {
+function displayVPAID({
+  player,
+  logger,
+  options,
+  display: { creative, media },
+  tracker
+}) {
   logger.debug("Displaying VPAID...");
   const iframe = document.createElement("iframe");
   iframe.id = `${creative.id}_${Date.now()}`;
-  iframe.style.cssText = `margin:0;border:0;width:${player.width()}px;height:${player.height()}px`;
+  iframe.className = "vjs-pop-vpaid-container";
   player.el().appendChild(iframe);
   const iframeDoc = iframe.contentDocument;
   if (!iframeDoc) {
@@ -1249,7 +1255,7 @@ function displayVPAID({ player, logger, options, display: { creative, media } },
       throw new Error("no VPAID adunit found");
     }
     logger.debug("Subscribing to VPAID adunit events");
-    const wrapper = new VPAIDWrapper(adunit);
+    const wrapper = new VPAIDWrapper(adunit, tracker);
     wrapper.registerCallbacks();
     logger.debug("Initializing VPAID adunit...");
     adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
@@ -1261,9 +1267,28 @@ function displayVPAID({ player, logger, options, display: { creative, media } },
   iframeDoc.head.appendChild(script);
 }
 var VPAIDWrapper = class {
-  constructor(adunit) {
+  constructor(adunit, tracker) {
     this.adunit = adunit;
-    __publicField(this, "callbacks", {
+    this.tracker = tracker;
+    __publicField(this, "callbacks");
+    __publicField(this, "onAdClickThru", (url, _id, playerHandles) => {
+      if (!playerHandles) {
+        this.tracker.click();
+        return;
+      }
+      if (!url) {
+        this.tracker.on("clickthrough", (mUrl) => {
+          window.open(mUrl, "_blank");
+        });
+      }
+      this.tracker.click();
+      if (url) {
+        window.open(url, "_blank");
+      }
+    });
+    __publicField(this, "dummy", () => {
+    });
+    this.callbacks = {
       AdStarted: this.dummy,
       AdStopped: this.dummy,
       AdSkipped: this.dummy,
@@ -1276,7 +1301,7 @@ var VPAIDWrapper = class {
       AdRemainingTimeChange: this.dummy,
       AdVolumeChange: this.dummy,
       AdImpression: this.dummy,
-      AdClickThru: this.dummy,
+      AdClickThru: this.onAdClickThru,
       AdInteraction: this.dummy,
       AdVideoStart: this.dummy,
       AdVideoFirstQuartile: this.dummy,
@@ -1290,7 +1315,7 @@ var VPAIDWrapper = class {
       AdPlaying: this.dummy,
       AdError: this.dummy,
       AdLog: this.dummy
-    });
+    };
   }
   registerCallbacks() {
     if (typeof this.adunit.subscribe === "function") {
@@ -1299,8 +1324,6 @@ var VPAIDWrapper = class {
         this.adunit.subscribe(this.callbacks[eventName], eventName);
       });
     }
-  }
-  dummy() {
   }
 };
 
@@ -1330,8 +1353,11 @@ function parseVAST(_0) {
     throw new Error("no vast provided in options");
   });
 }
-function displayVASTNative({ player, logger, display: { media } }) {
+function displayVASTNative({ player, logger, display: { media }, tracker }) {
   logger.debug("Displaying native VAST...");
+  tracker.on("clickthrough", (url) => {
+    window.open(url, "_blank");
+  });
   const source = {
     src: media.fileURL || "",
     type: media.mimeType || void 0
@@ -1444,9 +1470,9 @@ function createTracker({ player, logger, display: { creative, ad } }) {
   tracker.on("skip", () => {
     player.trigger("adSkipSent");
   });
-  tracker.on("clickthrough", (url) => {
+  tracker.on("clickthrough", () => {
+    logger.debug("Clickthrough tracking sent...");
     player.trigger("adClickSent");
-    window.open(url, "_blank");
   });
   return tracker;
 }
@@ -1559,9 +1585,9 @@ function register(vjs = import_video.default) {
             }
           });
           if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
-            displayVPAID(propsWithCreative, tracker);
+            displayVPAID(__spreadProps(__spreadValues({}, propsWithCreative), { tracker }));
           } else {
-            displayVASTNative(propsWithCreative);
+            displayVASTNative(__spreadProps(__spreadValues({}, propsWithCreative), { tracker }));
           }
           if (this.options.showClose) {
             this.player.el().appendChild(CloseComponent({
