@@ -172,7 +172,7 @@ export default function register(vjs: typeof videojs = videojs) {
 
                 // Check for VPAID
                 if (display.creative.apiFramework === 'VPAID' || display.media.apiFramework === 'VPAID') {
-                    displayVPAID(propsWithCreative);
+                    displayVPAID(propsWithCreative, tracker);
                 } else {
                     displayVASTNative(propsWithCreative);
                 }
@@ -239,10 +239,11 @@ export default function register(vjs: typeof videojs = videojs) {
             const windowWidth = window.innerWidth || document.documentElement.clientWidth;
             const windowHeight = window.innerHeight || document.documentElement.clientHeight;
 
+            const minLeft = windowWidth - this.player.width() > 0 ? 0 : windowWidth - this.player.width();
             const playerLocation = this.player.el().getBoundingClientRect();
             const isPlayerVisible =
                 playerLocation.top >= 0 &&
-                playerLocation.left >= windowWidth - this.player.width() &&
+                playerLocation.left >= minLeft &&
                 playerLocation.bottom <= windowHeight &&
                 playerLocation.right <= windowWidth;
 
