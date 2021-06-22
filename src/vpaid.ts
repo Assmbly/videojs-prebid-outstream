@@ -20,7 +20,7 @@ export function displayVPAID({
 
     const iframe = document.createElement('iframe');
     iframe.id = `${creative.id}_${Date.now()}`;
-    iframe.style.cssText = `margin:0;border:0;width:${player.width()}px;height:${player.height()}px`;
+    iframe.className = 'vjs-pop-vpaid-container';
     player.el().appendChild(iframe);
 
     // Add script to post ready message
@@ -85,36 +85,38 @@ export function displayVPAID({
 }
 
 class VPAIDWrapper {
-    private callbacks: iab.vpaid.EventsMap = {
-        AdStarted: this.dummy,
-        AdStopped: this.dummy,
-        AdSkipped: this.dummy,
-        AdLoaded: this.dummy,
-        AdLinearChange: this.dummy,
-        AdSizeChange: this.dummy,
-        AdExpandedChange: this.dummy,
-        AdSkippableStateChange: this.dummy,
-        AdDurationChange: this.dummy,
-        AdRemainingTimeChange: this.dummy,
-        AdVolumeChange: this.dummy,
-        AdImpression: this.dummy,
-        AdClickThru: this.onAdClickThru,
-        AdInteraction: this.dummy,
-        AdVideoStart: this.dummy,
-        AdVideoFirstQuartile: this.dummy,
-        AdVideoMidpoint: this.dummy,
-        AdVideoThirdQuartile: this.dummy,
-        AdVideoComplete: this.dummy,
-        AdUserAcceptInvitation: this.dummy,
-        AdUserMinimize: this.dummy,
-        AdUserClose: this.dummy,
-        AdPaused: this.dummy,
-        AdPlaying: this.dummy,
-        AdError: this.dummy,
-        AdLog: this.dummy,
-    };
+    private callbacks: iab.vpaid.EventsMap;
 
-    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker) {}
+    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker) {
+        this.callbacks = {
+            AdStarted: this.dummy,
+            AdStopped: this.dummy,
+            AdSkipped: this.dummy,
+            AdLoaded: this.dummy,
+            AdLinearChange: this.dummy,
+            AdSizeChange: this.dummy,
+            AdExpandedChange: this.dummy,
+            AdSkippableStateChange: this.dummy,
+            AdDurationChange: this.dummy,
+            AdRemainingTimeChange: this.dummy,
+            AdVolumeChange: this.dummy,
+            AdImpression: this.dummy,
+            AdClickThru: this.onAdClickThru,
+            AdInteraction: this.dummy,
+            AdVideoStart: this.dummy,
+            AdVideoFirstQuartile: this.dummy,
+            AdVideoMidpoint: this.dummy,
+            AdVideoThirdQuartile: this.dummy,
+            AdVideoComplete: this.dummy,
+            AdUserAcceptInvitation: this.dummy,
+            AdUserMinimize: this.dummy,
+            AdUserClose: this.dummy,
+            AdPaused: this.dummy,
+            AdPlaying: this.dummy,
+            AdError: this.dummy,
+            AdLog: this.dummy,
+        };
+    }
 
     registerCallbacks() {
         if (typeof this.adunit.subscribe === 'function') {
@@ -126,9 +128,8 @@ class VPAIDWrapper {
         }
     }
 
-    onAdClickThru(url: string, _id: string, playerHandles: boolean) {
-        // It is already clicked here....
-        console.debug(url, _id, playerHandles);
+    onAdClickThru = (url: string, _id: string, playerHandles: boolean) => {
+        console.debug('ad clicked', url, _id, playerHandles);
         if (playerHandles && !url) {
             // Use vast click url
             this.tracker.on('clickthrough', (mUrl) => {
@@ -141,10 +142,10 @@ class VPAIDWrapper {
         if (url) {
             window.open(url, '_blank');
         }
-    }
+    };
 
-    dummy() {
+    dummy = () => {
         // Dummy method to squelch errors from callbacks not found
         // See https://github.com/redbrickmedia/videojs-prebid-outstream/pull/16
-    }
+    };
 }
