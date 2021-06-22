@@ -1,3 +1,5 @@
+import { VASTTracker } from 'vast-client';
+
 import { BaseWithCreative } from './index';
 import VastError, { VPAID_ERROR } from './errors';
 
@@ -7,7 +9,10 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
-export function displayVPAID({ player, logger, options, display: { creative, media } }: BaseWithCreative) {
+export function displayVPAID(
+    { player, logger, options, display: { creative, media } }: BaseWithCreative,
+    tracker: VASTTracker
+) {
     logger.debug('Displaying VPAID...');
 
     const iframe = document.createElement('iframe');
@@ -30,6 +35,12 @@ export function displayVPAID({ player, logger, options, display: { creative, med
     }, options.maxVPAIDAdStart);
 
     player.on('dispose', () => {
+        clearTimeout(startVPAIDTimeout);
+    });
+
+    // Clear timeout if creative is playing so that it can pause
+    // without error
+    tracker.on('creativeView', () => {
         clearTimeout(startVPAIDTimeout);
     });
 

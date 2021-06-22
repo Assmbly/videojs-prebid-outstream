@@ -1214,7 +1214,7 @@ var VIEW_MODE = {
   FULLSCREEN: "fullscreen",
   THUMBNAIL: "thumbnail"
 };
-function displayVPAID({ player, logger, options, display: { creative, media } }) {
+function displayVPAID({ player, logger, options, display: { creative, media } }, tracker) {
   logger.debug("Displaying VPAID...");
   const iframe = document.createElement("iframe");
   iframe.id = `${creative.id}_${Date.now()}`;
@@ -1225,11 +1225,16 @@ function displayVPAID({ player, logger, options, display: { creative, media } })
     return;
   }
   const startVPAIDTimeout = setTimeout(() => {
+    console.debug("handler running");
     if (player && player.paused()) {
       throw new VastError(VPAID_ERROR, "VPAID is not playing");
     }
   }, options.maxVPAIDAdStart);
   player.on("dispose", () => {
+    clearTimeout(startVPAIDTimeout);
+  });
+  tracker.on("creativeView", () => {
+    console.debug("clear timeout");
     clearTimeout(startVPAIDTimeout);
   });
   iframe.contentWindow.onerror = (e) => {
@@ -1459,8 +1464,9 @@ function register(vjs = import_video.default) {
       __publicField(this, "onVisibilityChange", () => {
         const windowWidth = window.innerWidth || document.documentElement.clientWidth;
         const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+        const minLeft = windowWidth - this.player.width() > 0 ? 0 : windowWidth - this.player.width();
         const playerLocation = this.player.el().getBoundingClientRect();
-        const isPlayerVisible = playerLocation.top >= 0 && playerLocation.left >= windowWidth - this.player.width() && playerLocation.bottom <= windowHeight && playerLocation.right <= windowWidth;
+        const isPlayerVisible = playerLocation.top >= 0 && playerLocation.left >= minLeft && playerLocation.bottom <= windowHeight && playerLocation.right <= windowWidth;
         if (isPlayerVisible && !document.hidden && this.player.paused()) {
           this.player.play();
         }
@@ -1555,7 +1561,7 @@ function register(vjs = import_video.default) {
             }
           });
           if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
-            displayVPAID(propsWithCreative);
+            displayVPAID(propsWithCreative, tracker);
           } else {
             displayVASTNative(propsWithCreative);
           }
