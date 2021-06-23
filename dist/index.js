@@ -1570,7 +1570,7 @@ function register(vjs = import_video.default) {
                 }));
                 const source = this.player.selectSource(sources);
                 if (source) {
-                  media = sortedFiles[source.index];
+                  media = sortedFiles[source.source.index];
                 }
               }
               if (media) {
