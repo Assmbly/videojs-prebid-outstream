@@ -1545,6 +1545,8 @@ function register(vjs = import_video.default) {
           if (!response.ads) {
             throw new VastError(VAST_NO_ADS, "no ads found in vast");
           }
+          const originalSourceOrder = this.player.options_.sourceOrder;
+          this.player.options({ sourceOrder: true });
           let display = {};
           for (const ad of response.ads) {
             if (!ad.creatives) {
@@ -1554,11 +1556,23 @@ function register(vjs = import_video.default) {
               if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
                 continue;
               }
-              const media = creative.mediaFiles.sort((a, b) => {
-                const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
-                const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
-                return distanceA - distanceB;
-              }).find((m) => m.mimeType !== "video/x-flv");
+              let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
+              if (!media) {
+                const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
+                  const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
+                  const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
+                  return distanceA - distanceB;
+                });
+                const sources = sortedFiles.map((mediaFile, index) => ({
+                  src: mediaFile.fileURL || "",
+                  type: mediaFile.mimeType || void 0,
+                  index
+                }));
+                const source = this.player.selectSource(sources);
+                if (source) {
+                  media = sortedFiles[source.index];
+                }
+              }
               if (media) {
                 display = {
                   ad,
@@ -1569,6 +1583,7 @@ function register(vjs = import_video.default) {
               }
             }
           }
+          this.player.options({ sourceOrder: originalSourceOrder });
           if (!display.media) {
             throw new VastError(LINEAR_ERROR, "no suitable media found in vast");
           }
