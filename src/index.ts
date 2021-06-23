@@ -149,7 +149,7 @@ export default function register(vjs: typeof videojs = videojs) {
 
                             const source = this.player.selectSource(sources);
                             if (source) {
-                                media = sortedFiles[source.index];
+                                media = sortedFiles[source.source.index];
                             }
                         }
 
