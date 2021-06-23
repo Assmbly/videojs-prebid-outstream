@@ -1222,6 +1222,7 @@ function displayVPAID({
   tracker
 }) {
   logger.debug("Displaying VPAID...");
+  player.trigger("adVPAIDSelected");
   const iframe = document.createElement("iframe");
   iframe.id = `${creative.id}_${Date.now()}`;
   iframe.className = "vjs-pop-vpaid-container";
