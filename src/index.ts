@@ -101,12 +101,15 @@ export default function register(vjs: typeof videojs = videojs) {
                 const response = await parseVAST(props);
 
                 // At this point, vast tracker should be reasonably instantiated
-
                 logger.debug('Vast parsed: ', response);
 
                 if (!response.ads) {
                     throw new VastError(VAST_NO_ADS, 'no ads found in vast');
                 }
+
+                // Set source order
+                const originalSourceOrder = this.player.options_.sourceOrder;
+                this.player.options({ sourceOrder: true });
 
                 // Find linear creative from ads to display
                 let display: DisplayMedia | Record<string, never> = {};
@@ -120,20 +123,35 @@ export default function register(vjs: typeof videojs = videojs) {
                             continue;
                         }
 
-                        // Sort mediafiles by euclidean distance to player size
-                        const media = creative.mediaFiles
-                            .sort((a, b) => {
-                                const distanceA = Math.hypot(
-                                    a.width - this.player.width(),
-                                    a.height - this.player.height()
-                                );
-                                const distanceB = Math.hypot(
-                                    b.width - this.player.width(),
-                                    b.height - this.player.height()
-                                );
-                                return distanceA - distanceB;
-                            })
-                            .find((m) => m.mimeType !== 'video/x-flv');
+                        // Give VPAID preference
+                        let media = creative.mediaFiles.find((m) => m.apiFramework === 'VPAID');
+                        if (!media) {
+                            // Sort mediafiles by euclidean distance to player size
+                            const sortedFiles = creative.mediaFiles
+                                .filter((mediaFile) => mediaFile.mimeType !== 'video/x-flv')
+                                .sort((a, b) => {
+                                    const distanceA = Math.hypot(
+                                        a.width - this.player.width(),
+                                        a.height - this.player.height()
+                                    );
+                                    const distanceB = Math.hypot(
+                                        b.width - this.player.width(),
+                                        b.height - this.player.height()
+                                    );
+                                    return distanceA - distanceB;
+                                });
+
+                            const sources = sortedFiles.map<videojs.Tech.SourceObject>((mediaFile, index) => ({
+                                src: mediaFile.fileURL || '',
+                                type: mediaFile.mimeType || undefined,
+                                index,
+                            }));
+
+                            const source = this.player.selectSource(sources);
+                            if (source) {
+                                media = sortedFiles[source.index];
+                            }
+                        }
 
                         if (media) {
                             display = {
@@ -146,6 +164,9 @@ export default function register(vjs: typeof videojs = videojs) {
                         }
                     }
                 }
+
+                // Revert player source order
+                this.player.options({ sourceOrder: originalSourceOrder });
 
                 if (!display.media) {
                     throw new VastError(LINEAR_ERROR, 'no suitable media found in vast');
