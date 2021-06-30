@@ -2,6 +2,7 @@ declare namespace PrebidOutStreamPlugin {
     export type Instance = import('@types/video.js').Plugin & PluginInstance;
     interface PluginInstance {
         parse: () => Promise<void>;
+        handleError: (main: () => Promise<void>) => Promise<void>;
     }
 
     export type Options = import('@types/vast-client').VastRequestOptions & (VastURLOptions | VastXMLOptions);
