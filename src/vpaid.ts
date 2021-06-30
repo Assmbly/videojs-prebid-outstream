@@ -9,13 +9,18 @@ const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     THUMBNAIL: 'thumbnail',
 };
 
+interface VPAIDProps extends BaseWithCreativeAndTracker {
+    handleError: PrebidOutStreamPlugin.Instance['handleError'];
+}
+
 export function displayVPAID({
     player,
     logger,
     options,
     display: { creative, media },
     tracker,
-}: BaseWithCreativeAndTracker) {
+    handleError,
+}: VPAIDProps) {
     logger.debug('Displaying VPAID...');
     player.trigger('adVPAIDSelected');
 
@@ -24,18 +29,18 @@ export function displayVPAID({
     iframe.className = 'vjs-pop-vpaid-container';
     player.el().appendChild(iframe);
 
-    // Add script to post ready message
     const iframeDoc = iframe.contentDocument;
     if (!iframeDoc) {
-        // Unable to write iframe
-        return;
+        throw new Error('unable to write iframe');
     }
 
     // Failsafe to check if VPAID loaded and video played
     const startVPAIDTimeout = setTimeout(() => {
-        if (player && player.paused()) {
-            throw new VastError(VPAID_ERROR, 'VPAID is not playing');
-        }
+        handleError(async () => {
+            if (player && player.paused()) {
+                throw new VastError(VPAID_ERROR, 'VPAID is not playing');
+            }
+        });
     }, options.maxVPAIDAdStart);
 
     player.on('dispose', () => {
@@ -48,15 +53,26 @@ export function displayVPAID({
         clearTimeout(startVPAIDTimeout);
     });
 
-    iframe.contentWindow!.onerror = (e) => {
-        const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
-        throw new VastError(VPAID_ERROR, message);
+    const handleVastError = (main: () => void) => {
+        return () => {
+            // Prevent stacking errors
+            clearTimeout(startVPAIDTimeout);
+
+            handleError(async () => {
+                try {
+                    main();
+                } catch (e) {
+                    const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
+                    throw new VastError(VPAID_ERROR, message);
+                }
+            });
+        };
     };
 
     const script = iframeDoc.createElement('script');
 
     script.src = media.fileURL || '';
-    script.onload = () => {
+    script.onload = handleVastError(() => {
         logger.debug('VPAID script has loaded...');
         const adunit = iframe.contentWindow?.getVPAIDAd?.();
         if (!adunit) {
@@ -80,7 +96,7 @@ export function displayVPAID({
                 videoSlotCanAutoPlay: !!player.autoplay(),
             }
         );
-    };
+    });
 
     iframeDoc.head.appendChild(script);
 }
