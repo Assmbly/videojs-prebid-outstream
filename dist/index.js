@@ -1219,7 +1219,8 @@ function displayVPAID({
   logger,
   options,
   display: { creative, media },
-  tracker
+  tracker,
+  handleError
 }) {
   logger.debug("Displaying VPAID...");
   player.trigger("adVPAIDSelected");
@@ -1229,12 +1230,14 @@ function displayVPAID({
   player.el().appendChild(iframe);
   const iframeDoc = iframe.contentDocument;
   if (!iframeDoc) {
-    return;
+    throw new Error("unable to write iframe");
   }
   const startVPAIDTimeout = setTimeout(() => {
-    if (player && player.paused()) {
-      throw new VastError(VPAID_ERROR, "VPAID is not playing");
-    }
+    handleError(() => __async(this, null, function* () {
+      if (player && player.paused()) {
+        throw new VastError(VPAID_ERROR, "VPAID is not playing");
+      }
+    }));
   }, options.maxVPAIDAdStart);
   player.on("dispose", () => {
     clearTimeout(startVPAIDTimeout);
@@ -1242,13 +1245,22 @@ function displayVPAID({
   tracker.on("creativeView", () => {
     clearTimeout(startVPAIDTimeout);
   });
-  iframe.contentWindow.onerror = (e) => {
-    const message = typeof e === "string" ? e : e.message;
-    throw new VastError(VPAID_ERROR, message);
+  const handleVastError = (main) => {
+    return () => {
+      clearTimeout(startVPAIDTimeout);
+      handleError(() => __async(this, null, function* () {
+        try {
+          main();
+        } catch (e) {
+          const message = typeof e === "string" ? e : e.message;
+          throw new VastError(VPAID_ERROR, message);
+        }
+      }));
+    };
   };
   const script = iframeDoc.createElement("script");
   script.src = media.fileURL || "";
-  script.onload = () => {
+  script.onload = handleVastError(() => {
     var _a, _b;
     logger.debug("VPAID script has loaded...");
     const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
@@ -1264,7 +1276,7 @@ function displayVPAID({
       videoSlot: player.tech({ ignoreWarning: true }).el(),
       videoSlotCanAutoPlay: !!player.autoplay()
     });
-  };
+  });
   iframeDoc.head.appendChild(script);
 }
 var VPAIDWrapper = class {
@@ -1486,6 +1498,119 @@ function register(vjs = import_video.default) {
       super(player, options);
       __publicField(this, "player");
       __publicField(this, "options");
+      __publicField(this, "tracker");
+      __publicField(this, "logger");
+      __publicField(this, "handleError", (main) => __async(this, null, function* () {
+        try {
+          yield main();
+        } catch (e) {
+          const error = `POP: ${e.message}`;
+          this.logger.error("Exception caught: ", error, this);
+          this.player.error_ = error;
+          if (e instanceof VastError) {
+            if (this.tracker) {
+              this.tracker.errorWithCode(e.vastErrorCode.toString());
+            }
+            this.player.trigger("adError");
+          }
+          this.player.error(error);
+        }
+      }));
+      __publicField(this, "setup", () => __async(this, null, function* () {
+        var _a;
+        this.logger.debug("Initialize plugin with options", this.options);
+        const props = { player: this.player, options: this.options, logger: this.logger };
+        const response = yield parseVAST(props);
+        this.logger.debug("Vast parsed: ", response);
+        if (!response.ads) {
+          throw new VastError(VAST_NO_ADS, "no ads found in vast");
+        }
+        const originalSourceOrder = this.player.options_.sourceOrder;
+        this.player.options({ sourceOrder: true });
+        let display = {};
+        for (const ad of response.ads) {
+          if (!ad.creatives) {
+            continue;
+          }
+          for (const creative of ad.creatives) {
+            if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
+              continue;
+            }
+            let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
+            if (!media) {
+              const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
+                const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
+                const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
+                return distanceA - distanceB;
+              });
+              const sources = sortedFiles.map((mediaFile, index) => ({
+                src: mediaFile.fileURL || "",
+                type: mediaFile.mimeType || void 0,
+                index
+              }));
+              const source = this.player.selectSource(sources);
+              if (source) {
+                media = sortedFiles[source.source.index];
+              }
+            }
+            if (media) {
+              display = {
+                ad,
+                creative,
+                media
+              };
+              break;
+            }
+          }
+        }
+        this.player.options({ sourceOrder: originalSourceOrder });
+        if (!display.media) {
+          throw new VastError(LINEAR_ERROR, "no suitable media found in vast");
+        }
+        this.logger.debug("Loading creative: ", display.creative);
+        this.logger.debug("Loading media: ", display.media);
+        const propsWithCreative = __spreadProps(__spreadValues({}, props), { display });
+        this.logger.debug("Setting up tracker...");
+        this.tracker = createTracker(propsWithCreative);
+        Object.keys(this.options.adControls).forEach((key) => {
+          var _a2, _b;
+          if (this.options.adControls[key]) {
+            (_a2 = this.player.controlBar.getChild(key)) == null ? void 0 : _a2.show();
+          } else {
+            (_b = this.player.controlBar.getChild(key)) == null ? void 0 : _b.hide();
+          }
+        });
+        if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
+          displayVPAID(__spreadProps(__spreadValues({}, propsWithCreative), { tracker: this.tracker, handleError: this.handleError }));
+        } else {
+          displayVASTNative(__spreadProps(__spreadValues({}, propsWithCreative), { tracker: this.tracker }));
+        }
+        if (this.options.showClose) {
+          this.player.el().appendChild(CloseComponent({
+            onClick: () => {
+              this.logger.debug("Sending ad closed...");
+              this.player.trigger("adClose");
+              this.tracker.skip();
+            }
+          }));
+        }
+        if ((_a = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _a.url) {
+          ["mouseup", "touchend"].forEach((eventName) => {
+            this.player.el().addEventListener(eventName, (e) => {
+              const elem = e.target;
+              if (elem.tagName === "VIDEO") {
+                this.logger.debug("Sending click event on video...");
+                this.player.trigger("adClick");
+                this.tracker.click();
+              }
+            }, { capture: true, passive: true });
+          });
+        }
+        window.addEventListener("visibilitychange", this.onVisibilityChange);
+        this.player.on("dispose", () => {
+          window.removeEventListener("visibilitychange", this.onVisibilityChange);
+        });
+      }));
       __publicField(this, "onVisibilityChange", () => {
         const windowWidth = window.innerWidth || document.documentElement.clientWidth;
         const windowHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -1530,118 +1655,8 @@ function register(vjs = import_video.default) {
         resolveAll: false,
         maxVPAIDAdStart: 5e3
       }), options), { adControls });
-      this.setup();
-    }
-    setup() {
-      return __async(this, null, function* () {
-        var _a;
-        const logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
-        logger.debug("Initialize plugin with options", this.options);
-        let tracker;
-        try {
-          const props = { player: this.player, options: this.options, logger };
-          const response = yield parseVAST(props);
-          logger.debug("Vast parsed: ", response);
-          if (!response.ads) {
-            throw new VastError(VAST_NO_ADS, "no ads found in vast");
-          }
-          const originalSourceOrder = this.player.options_.sourceOrder;
-          this.player.options({ sourceOrder: true });
-          let display = {};
-          for (const ad of response.ads) {
-            if (!ad.creatives) {
-              continue;
-            }
-            for (const creative of ad.creatives) {
-              if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
-                continue;
-              }
-              let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
-              if (!media) {
-                const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
-                  const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
-                  const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
-                  return distanceA - distanceB;
-                });
-                const sources = sortedFiles.map((mediaFile, index) => ({
-                  src: mediaFile.fileURL || "",
-                  type: mediaFile.mimeType || void 0,
-                  index
-                }));
-                const source = this.player.selectSource(sources);
-                if (source) {
-                  media = sortedFiles[source.source.index];
-                }
-              }
-              if (media) {
-                display = {
-                  ad,
-                  creative,
-                  media
-                };
-                break;
-              }
-            }
-          }
-          this.player.options({ sourceOrder: originalSourceOrder });
-          if (!display.media) {
-            throw new VastError(LINEAR_ERROR, "no suitable media found in vast");
-          }
-          logger.debug("Loading creative: ", display.creative);
-          logger.debug("Loading media: ", display.media);
-          const propsWithCreative = __spreadProps(__spreadValues({}, props), { display });
-          logger.debug("Setting up tracker...");
-          tracker = createTracker(propsWithCreative);
-          Object.keys(this.options.adControls).forEach((key) => {
-            var _a2, _b;
-            if (this.options.adControls[key]) {
-              (_a2 = this.player.controlBar.getChild(key)) == null ? void 0 : _a2.show();
-            } else {
-              (_b = this.player.controlBar.getChild(key)) == null ? void 0 : _b.hide();
-            }
-          });
-          if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
-            displayVPAID(__spreadProps(__spreadValues({}, propsWithCreative), { tracker }));
-          } else {
-            displayVASTNative(__spreadProps(__spreadValues({}, propsWithCreative), { tracker }));
-          }
-          if (this.options.showClose) {
-            this.player.el().appendChild(CloseComponent({
-              onClick: () => {
-                logger.debug("Sending ad closed...");
-                this.player.trigger("adClose");
-                tracker.skip();
-              }
-            }));
-          }
-          if ((_a = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _a.url) {
-            ["mouseup", "touchend"].forEach((eventName) => {
-              this.player.el().addEventListener(eventName, (e) => {
-                const elem = e.target;
-                if (elem.tagName === "VIDEO") {
-                  logger.debug("Sending click event on video...");
-                  this.player.trigger("adClick");
-                  tracker.click();
-                }
-              }, { capture: true, passive: true });
-            });
-          }
-          window.addEventListener("visibilitychange", this.onVisibilityChange);
-          this.player.on("dispose", () => {
-            window.removeEventListener("visibilitychange", this.onVisibilityChange);
-          });
-        } catch (e) {
-          logger.error("Exception caught: ", e);
-          this.player.error(`POP: ${e.message}`);
-          if (e instanceof VastError) {
-            if (tracker) {
-              tracker.errorWithCode(e.vastErrorCode.toString());
-            }
-            this.player.trigger("adError");
-          }
-          this.player.trigger("error");
-        }
-      });
+      this.logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
+      this.handleError(this.setup);
     }
     isLinearCreative(creative) {
       return (creative == null ? void 0 : creative.type) === "linear";
