@@ -55,13 +55,13 @@ export function displayVPAID({
 
     const handleVastError = (main: () => void) => {
         return () => {
-            // Prevent stacking errors
-            clearTimeout(startVPAIDTimeout);
-
             handleError(async () => {
                 try {
                     main();
                 } catch (e) {
+                    // Prevent stacking errors
+                    clearTimeout(startVPAIDTimeout);
+
                     const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
                     throw new VastError(VPAID_ERROR, message);
                 }
