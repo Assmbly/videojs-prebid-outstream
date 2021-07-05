@@ -1247,11 +1247,11 @@ function displayVPAID({
   });
   const handleVastError = (main) => {
     return () => {
-      clearTimeout(startVPAIDTimeout);
       handleError(() => __async(this, null, function* () {
         try {
           main();
         } catch (e) {
+          clearTimeout(startVPAIDTimeout);
           const message = typeof e === "string" ? e : e.message;
           throw new VastError(VPAID_ERROR, message);
         }
