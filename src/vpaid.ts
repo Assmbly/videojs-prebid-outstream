@@ -92,7 +92,7 @@ export function displayVPAID({
             { AdParameters: creative.adParameters || '' },
             {
                 slot: iframeDoc.body,
-                videoSlot: player.tech({ ignoreWarning: true }).el() as HTMLVideoElement,
+                videoSlot: player.el().querySelector('video') as HTMLVideoElement,
                 videoSlotCanAutoPlay: !!player.autoplay(),
             }
         );
