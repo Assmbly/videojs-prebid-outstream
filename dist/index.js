@@ -1273,7 +1273,7 @@ function displayVPAID({
     logger.debug("Initializing VPAID adunit...");
     adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
       slot: iframeDoc.body,
-      videoSlot: player.tech({ ignoreWarning: true }).el(),
+      videoSlot: player.el().querySelector("video"),
       videoSlotCanAutoPlay: !!player.autoplay()
     });
   });
