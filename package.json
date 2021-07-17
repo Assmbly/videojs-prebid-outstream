@@ -31,7 +31,7 @@
     "devDependencies": {
         "@types/iab-vpaid": "^2.0.1",
         "@types/jest": "^26.0.21",
-        "@types/vast-client": "^3.0.0",
+        "@types/vast-client": "^3.0.1",
         "@types/video.js": "^7.3.19",
         "@typescript-eslint/eslint-plugin": "^4.26.1",
         "@typescript-eslint/parser": "^4.26.1",

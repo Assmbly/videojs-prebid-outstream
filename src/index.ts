@@ -1,5 +1,5 @@
 import videojs, { VideoJsPlayer } from 'video.js';
-import { VastCreativeLinear, VastCreative, VastMediaFile, VastAd, VASTTracker } from 'vast-client';
+import { VastCreativeLinear, VastCreative, VastMediaFile, VastAd, VASTTracker, VastResponse } from 'vast-client';
 
 import { displayVPAID } from './vpaid';
 import { displayVASTNative, parseVAST } from './vast';
@@ -97,14 +97,14 @@ export default function register(vjs: typeof videojs = videojs) {
             try {
                 await main();
             } catch (e) {
-                const error = `POP: ${e.message}`;
+                const error = `POP: ${e.message || e}`;
                 this.logger.error('Exception caught: ', error, this);
                 this.player.error_ = error;
 
                 if (e instanceof VastError) {
                     // If tracker is defined fast-forward error to tracker
                     if (this.tracker) {
-                        this.tracker.errorWithCode(e.vastErrorCode.toString());
+                        this.tracker.error({ ERRORCODE: e.vastErrorCode.toString() });
                     }
                     this.player.trigger('adError');
                 }
@@ -118,75 +118,33 @@ export default function register(vjs: typeof videojs = videojs) {
             this.logger.debug('Initialize plugin with options', this.options);
 
             const props = { player: this.player, options: this.options, logger: this.logger };
-            const response = await parseVAST(props);
+            let response = await parseVAST(props);
+            let display: DisplayMedia | Record<string, never> = {}
 
             // At this point, vast tracker should be reasonably instantiated
             this.logger.debug('Vast parsed: ', response);
 
-            if (!response.ads) {
-                throw new VastError(VAST_NO_ADS, 'no ads found in vast');
-            }
-
             // Set source order
             const originalSourceOrder = this.player.options_.sourceOrder;
             this.player.options({ sourceOrder: true });
+            try {
+                display = this.getDisplayMedia(response)
 
-            // Find linear creative from ads to display
-            let display: DisplayMedia | Record<string, never> = {};
-            for (const ad of response.ads) {
-                if (!ad.creatives) {
-                    continue;
-                }
-
-                for (const creative of ad.creatives) {
-                    if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
-                        continue;
-                    }
-
-                    // Give VPAID preference
-                    let media = creative.mediaFiles.find((m) => m.apiFramework === 'VPAID');
-                    if (!media) {
-                        // Sort mediafiles by euclidean distance to player size
-                        const sortedFiles = creative.mediaFiles
-                            .filter((mediaFile) => mediaFile.mimeType !== 'video/x-flv')
-                            .sort((a, b) => {
-                                const distanceA = Math.hypot(
-                                    a.width - this.player.width(),
-                                    a.height - this.player.height()
-                                );
-                                const distanceB = Math.hypot(
-                                    b.width - this.player.width(),
-                                    b.height - this.player.height()
-                                );
-                                return distanceA - distanceB;
-                            });
-
-                        const sources = sortedFiles.map<videojs.Tech.SourceObject>((mediaFile, index) => ({
-                            src: mediaFile.fileURL || '',
-                            type: mediaFile.mimeType || undefined,
-                            index,
-                        }));
-
-                        const source = this.player.selectSource(sources);
-                        if (source) {
-                            media = sortedFiles[source.source.index];
-                        }
-                    }
-
-                    if (media) {
-                        display = {
-                            ad,
-                            creative,
-                            media,
-                        };
-
-                        break;
-                    }
-                }
+                // If the media is a dv360 video, characterized by file url:
+                // "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js"
+                // Then the creative ad parameter is a link to the actual vast document that we want to display
+                // temp1.adParameters.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&')
+                if (display.media.fileURL === 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js') {
+                    const dbmVast = display.creative.adParameters?.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&')
+                    response = await parseVAST({...props, options: {...this.options, adXml: dbmVast, adTagUrl: ''}})
+                    display = this.getDisplayMedia(response)
+                }   
+            } catch(e) {
+                throw e
+            } finally {
+                // Revert player source order
+                this.player.options({ sourceOrder: originalSourceOrder });
             }
-
-            // Revert player source order
-            this.player.options({ sourceOrder: originalSourceOrder });
 
             if (!display.media) {
                 throw new VastError(LINEAR_ERROR, 'no suitable media found in vast');
@@ -286,6 +244,65 @@ export default function register(vjs: typeof videojs = videojs) {
 
         isLinearCreative(creative?: VastCreative): creative is VastCreativeLinear {
             return creative?.type === 'linear';
+        }
+
+        getDisplayMedia(response: VastResponse): DisplayMedia | Record<string, never> {
+            if (!response.ads) {
+                throw new VastError(VAST_NO_ADS, 'no ads found in vast');
+            }
+
+            // Find linear creative from ads to display
+            for (const ad of response.ads) {
+                if (!ad.creatives) {
+                    continue;
+                }
+
+                for (const creative of ad.creatives) {
+                    if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
+                        continue;
+                    }
+
+                    // Give VPAID preference
+                    let media = creative.mediaFiles.find((m) => m.apiFramework === 'VPAID');
+                    if (!media) {
+                        // Sort mediafiles by euclidean distance to player size
+                        const sortedFiles = creative.mediaFiles
+                            .filter((mediaFile) => mediaFile.mimeType !== 'video/x-flv')
+                            .sort((a, b) => {
+                                const distanceA = Math.hypot(
+                                    a.width - this.player.width(),
+                                    a.height - this.player.height()
+                                );
+                                const distanceB = Math.hypot(
+                                    b.width - this.player.width(),
+                                    b.height - this.player.height()
+                                );
+                                return distanceA - distanceB;
+                            });
+
+                        const sources = sortedFiles.map<videojs.Tech.SourceObject>((mediaFile, index) => ({
+                            src: mediaFile.fileURL || '',
+                            type: mediaFile.mimeType || undefined,
+                            index,
+                        }));
+
+                        const source = this.player.selectSource(sources);
+                        if (source) {
+                            media = sortedFiles[source.source.index];
+                        }
+                    }
+
+                    if (media) {
+                        return {
+                            ad,
+                            creative,
+                            media,
+                        };
+                    }
+                }
+            }
+
+            return {}
         }
     };
 
