@@ -119,7 +119,7 @@ export default function register(vjs: typeof videojs = videojs) {
 
             const props = { player: this.player, options: this.options, logger: this.logger };
             let response = await parseVAST(props);
-            let display: DisplayMedia | Record<string, never> = {}
+            let display: DisplayMedia | Record<string, never> = {};
 
             // At this point, vast tracker should be reasonably instantiated
             this.logger.debug('Vast parsed: ', response);
@@ -128,19 +128,24 @@ export default function register(vjs: typeof videojs = videojs) {
             const originalSourceOrder = this.player.options_.sourceOrder;
             this.player.options({ sourceOrder: true });
             try {
-                display = this.getDisplayMedia(response)
+                display = this.getDisplayMedia(response);
 
                 // If the media is a dv360 video, characterized by file url:
                 // "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js"
                 // Then the creative ad parameter is a link to the actual vast document that we want to display
                 // temp1.adParameters.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&')
                 if (display.media.fileURL === 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js') {
-                    const dbmVast = display.creative.adParameters?.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&')
-                    response = await parseVAST({...props, options: {...this.options, adXml: dbmVast, adTagUrl: ''}})
-                    display = this.getDisplayMedia(response)
-                }   
-            } catch(e) {
-                throw e
+                    const dbmVast = display.creative.adParameters
+                        ?.replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&amp;/g, '&');
+                    response = await parseVAST({
+                        ...props,
+                        options: { ...this.options, adXml: dbmVast, adTagUrl: '' },
+                    });
+                    display = this.getDisplayMedia(response);
+                }
             } finally {
                 // Revert player source order
                 this.player.options({ sourceOrder: originalSourceOrder });
@@ -302,7 +307,7 @@ export default function register(vjs: typeof videojs = videojs) {
                 }
             }
 
-            return {}
+            return {};
         }
     };
 
