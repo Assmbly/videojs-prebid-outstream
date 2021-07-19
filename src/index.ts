@@ -133,7 +133,6 @@ export default function register(vjs: typeof videojs = videojs) {
                 // If the media is a dv360 video, characterized by file url:
                 // "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js"
                 // Then the creative ad parameter is a link to the actual vast document that we want to display
-                // temp1.adParameters.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&amp;/g,'&')
                 if (display.media.fileURL === 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js') {
                     const dbmVast = display.creative.adParameters
                         ?.replace(/&lt;/g, '<')
