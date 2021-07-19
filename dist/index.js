@@ -1504,12 +1504,12 @@ function register(vjs = import_video.default) {
         try {
           yield main();
         } catch (e) {
-          const error = `POP: ${e.message}`;
+          const error = `POP: ${e.message || e}`;
           this.logger.error("Exception caught: ", error, this);
           this.player.error_ = error;
           if (e instanceof VastError) {
             if (this.tracker) {
-              this.tracker.errorWithCode(e.vastErrorCode.toString());
+              this.tracker.error({ ERRORCODE: e.vastErrorCode.toString() });
             }
             this.player.trigger("adError");
           }
@@ -1517,53 +1517,26 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a;
+        var _a, _b;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
-        const response = yield parseVAST(props);
+        let response = yield parseVAST(props);
+        let display = {};
         this.logger.debug("Vast parsed: ", response);
-        if (!response.ads) {
-          throw new VastError(VAST_NO_ADS, "no ads found in vast");
-        }
         const originalSourceOrder = this.player.options_.sourceOrder;
         this.player.options({ sourceOrder: true });
-        let display = {};
-        for (const ad of response.ads) {
-          if (!ad.creatives) {
-            continue;
+        try {
+          display = this.getDisplayMedia(response);
+          if (display.media.fileURL === "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js") {
+            const dbmVast = (_a = display.creative.adParameters) == null ? void 0 : _a.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+            response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+              options: __spreadProps(__spreadValues({}, this.options), { adXml: dbmVast, adTagUrl: "" })
+            }));
+            display = this.getDisplayMedia(response);
           }
-          for (const creative of ad.creatives) {
-            if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
-              continue;
-            }
-            let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
-            if (!media) {
-              const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
-                const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
-                const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
-                return distanceA - distanceB;
-              });
-              const sources = sortedFiles.map((mediaFile, index) => ({
-                src: mediaFile.fileURL || "",
-                type: mediaFile.mimeType || void 0,
-                index
-              }));
-              const source = this.player.selectSource(sources);
-              if (source) {
-                media = sortedFiles[source.source.index];
-              }
-            }
-            if (media) {
-              display = {
-                ad,
-                creative,
-                media
-              };
-              break;
-            }
-          }
+        } finally {
+          this.player.options({ sourceOrder: originalSourceOrder });
         }
-        this.player.options({ sourceOrder: originalSourceOrder });
         if (!display.media) {
           throw new VastError(LINEAR_ERROR, "no suitable media found in vast");
         }
@@ -1573,11 +1546,11 @@ function register(vjs = import_video.default) {
         this.logger.debug("Setting up tracker...");
         this.tracker = createTracker(propsWithCreative);
         Object.keys(this.options.adControls).forEach((key) => {
-          var _a2, _b;
+          var _a2, _b2;
           if (this.options.adControls[key]) {
             (_a2 = this.player.controlBar.getChild(key)) == null ? void 0 : _a2.show();
           } else {
-            (_b = this.player.controlBar.getChild(key)) == null ? void 0 : _b.hide();
+            (_b2 = this.player.controlBar.getChild(key)) == null ? void 0 : _b2.hide();
           }
         });
         if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
@@ -1594,7 +1567,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_a = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _a.url) {
+        if ((_b = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _b.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
@@ -1660,6 +1633,46 @@ function register(vjs = import_video.default) {
     }
     isLinearCreative(creative) {
       return (creative == null ? void 0 : creative.type) === "linear";
+    }
+    getDisplayMedia(response) {
+      if (!response.ads) {
+        throw new VastError(VAST_NO_ADS, "no ads found in vast");
+      }
+      for (const ad of response.ads) {
+        if (!ad.creatives) {
+          continue;
+        }
+        for (const creative of ad.creatives) {
+          if (!this.isLinearCreative(creative) || !creative.mediaFiles) {
+            continue;
+          }
+          let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
+          if (!media) {
+            const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
+              const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
+              const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
+              return distanceA - distanceB;
+            });
+            const sources = sortedFiles.map((mediaFile, index) => ({
+              src: mediaFile.fileURL || "",
+              type: mediaFile.mimeType || void 0,
+              index
+            }));
+            const source = this.player.selectSource(sources);
+            if (source) {
+              media = sortedFiles[source.source.index];
+            }
+          }
+          if (media) {
+            return {
+              ad,
+              creative,
+              media
+            };
+          }
+        }
+      }
+      return {};
     }
   };
   vjs.registerPlugin("outstream", Plugin);
