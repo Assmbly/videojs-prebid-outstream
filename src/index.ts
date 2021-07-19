@@ -127,6 +127,7 @@ export default function register(vjs: typeof videojs = videojs) {
             // Set source order
             const originalSourceOrder = this.player.options_.sourceOrder;
             this.player.options({ sourceOrder: true });
+
             try {
                 display = this.getDisplayMedia(response);
 
