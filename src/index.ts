@@ -130,21 +130,64 @@ export default function register(vjs: typeof videojs = videojs) {
 
             try {
                 display = this.getDisplayMedia(response);
+                let adParameters = '';
 
-                // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
-                // Then the creative ad parameter is the actual vast document that we want to display
-                if (display.media.fileURL === 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js') {
-                    const dbmVast = display.creative.adParameters
-                        ?.replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .replace(/&quot;/g, '"')
-                        .replace(/&amp;/g, '&');
-                    response = await parseVAST({
-                        ...props,
-                        options: { ...this.options, adXml: dbmVast, adTagUrl: '' },
-                    });
-                    display = this.getDisplayMedia(response);
-                }
+                do {
+                    adParameters = display.creative.adParameters || '';
+
+                    // This is a verizon o2shim "https://acds.prod.vidible.tv/o2shim"
+                    if (display.media?.fileURL?.includes('acds.prod.vidible.tv/o2shim')) {
+                        try {
+                            adParameters = decodeURIComponent(adParameters)
+                                .slice(6)
+                                .replaceAll('"', '"')
+                                .replaceAll('\n', '')
+                                .replaceAll('\t', '')
+                                .replaceAll('+', ' ');
+                        } catch (_) {
+                            // Not encoded
+                        }
+
+                        response = await parseVAST({
+                            ...props,
+                            options: { ...this.options, adXml: adParameters, adTagUrl: '' },
+                        });
+                        display = this.getDisplayMedia(response);
+                        continue;
+                    }
+
+                    if (display.media?.fileURL?.includes('static.adsafeprotected.com')) {
+                        this.logger.debug('parsing parameters', adParameters);
+                        const subParameters = JSON.parse(adParameters).adParameters;
+                        adParameters = subParameters
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&quot;/g, '"')
+                            .replace(/&amp;/g, '&');
+                        response = await parseVAST({
+                            ...props,
+                            options: { ...this.options, adXml: adParameters, adTagUrl: '' },
+                        });
+                        display = this.getDisplayMedia(response);
+                        continue;
+                    }
+
+                    // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
+                    // Then the creative ad parameter is the actual vast document that we want to display
+                    if (display.media?.fileURL?.includes('imasdk.googleapis.com')) {
+                        adParameters = adParameters
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&quot;/g, '"')
+                            .replace(/&amp;/g, '&');
+                        response = await parseVAST({
+                            ...props,
+                            options: { ...this.options, adXml: adParameters, adTagUrl: '' },
+                        });
+                        display = this.getDisplayMedia(response);
+                        continue;
+                    }
+                } while (adParameters.includes('<VAST') && adParameters !== display.creative.adParameters);
             } finally {
                 // Revert player source order
                 this.player.options({ sourceOrder: originalSourceOrder });
@@ -267,11 +310,19 @@ export default function register(vjs: typeof videojs = videojs) {
                     }
 
                     // Give VPAID preference
-                    let media = creative.mediaFiles.find((m) => m.apiFramework === 'VPAID');
+                    let media = creative.mediaFiles
+                        .filter(
+                            (mediaFile) =>
+                                !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
+                        )
+                        .find((m) => m.apiFramework === 'VPAID');
                     if (!media) {
                         // Sort mediafiles by euclidean distance to player size
                         const sortedFiles = creative.mediaFiles
-                            .filter((mediaFile) => mediaFile.mimeType !== 'video/x-flv')
+                            .filter(
+                                (mediaFile) =>
+                                    !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
+                            )
                             .sort((a, b) => {
                                 const distanceA = Math.hypot(
                                     a.width - this.player.width(),

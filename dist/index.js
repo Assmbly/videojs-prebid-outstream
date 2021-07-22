@@ -1517,7 +1517,7 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b;
+        var _a, _b, _c, _d, _e, _f, _g;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
         let response = yield parseVAST(props);
@@ -1527,13 +1527,39 @@ function register(vjs = import_video.default) {
         this.player.options({ sourceOrder: true });
         try {
           display = this.getDisplayMedia(response);
-          if (display.media.fileURL === "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js") {
-            const dbmVast = (_a = display.creative.adParameters) == null ? void 0 : _a.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
-            response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-              options: __spreadProps(__spreadValues({}, this.options), { adXml: dbmVast, adTagUrl: "" })
-            }));
-            display = this.getDisplayMedia(response);
-          }
+          let adParameters = "";
+          do {
+            adParameters = display.creative.adParameters || "";
+            if ((_b = (_a = display.media) == null ? void 0 : _a.fileURL) == null ? void 0 : _b.includes("acds.prod.vidible.tv/o2shim")) {
+              try {
+                adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
+              } catch (_) {
+              }
+              response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
+              }));
+              display = this.getDisplayMedia(response);
+              continue;
+            }
+            if ((_d = (_c = display.media) == null ? void 0 : _c.fileURL) == null ? void 0 : _d.includes("static.adsafeprotected.com")) {
+              this.logger.debug("parsing parameters", adParameters);
+              const subParameters = JSON.parse(adParameters).adParameters;
+              adParameters = subParameters.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+              response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
+              }));
+              display = this.getDisplayMedia(response);
+              continue;
+            }
+            if ((_f = (_e = display.media) == null ? void 0 : _e.fileURL) == null ? void 0 : _f.includes("imasdk.googleapis.com")) {
+              adParameters = adParameters.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+              response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
+              }));
+              display = this.getDisplayMedia(response);
+              continue;
+            }
+          } while (adParameters.includes("<VAST") && adParameters !== display.creative.adParameters);
         } finally {
           this.player.options({ sourceOrder: originalSourceOrder });
         }
@@ -1567,7 +1593,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_b = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _b.url) {
+        if ((_g = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _g.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
@@ -1648,7 +1674,7 @@ function register(vjs = import_video.default) {
           }
           let media = creative.mediaFiles.find((m) => m.apiFramework === "VPAID");
           if (!media) {
-            const sortedFiles = creative.mediaFiles.filter((mediaFile) => mediaFile.mimeType !== "video/x-flv").sort((a, b) => {
+            const sortedFiles = creative.mediaFiles.filter((mediaFile) => !["video/x-flv", "application/x-shockwave-flash"].includes(mediaFile.mimeType || "")).sort((a, b) => {
               const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
               const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
               return distanceA - distanceB;
