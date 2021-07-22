@@ -157,13 +157,27 @@ export default function register(vjs: typeof videojs = videojs) {
                     }
 
                     if (display.media?.fileURL?.includes('static.adsafeprotected.com')) {
-                        this.logger.debug('parsing parameters', adParameters);
-                        const subParameters = JSON.parse(adParameters).adParameters;
-                        adParameters = subParameters
+                        let subDocument = '';
+                        try {
+                            // adsafe protected recursively json encodes the adparameters
+                            // and then wraps it with ima
+                            let subParameters = JSON.parse(adParameters);
+                            while (typeof subParameters !== 'string') {
+                                subParameters = JSON.parse(subParameters.adParameters);
+                                subDocument = subParameters.adParameters;
+                            }
+                        } catch (_) {
+                            // Silence the errors because the last
+                            // set of ad parameters will be a vast xml
+                        }
+
+                        adParameters = subDocument
                             .replace(/&lt;/g, '<')
                             .replace(/&gt;/g, '>')
                             .replace(/&quot;/g, '"')
                             .replace(/&amp;/g, '&');
+
+                        this.logger.debug('parsed parameters', adParameters);
                         response = await parseVAST({
                             ...props,
                             options: { ...this.options, adXml: adParameters, adTagUrl: '' },
