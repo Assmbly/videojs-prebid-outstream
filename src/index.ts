@@ -134,82 +134,77 @@ export default function register(vjs: typeof videojs = videojs) {
                 let hasNestedVast = false;
 
                 do {
+                    let subDocument = '';
+                    let subParameters = { adParameters: '' };
                     hasNestedVast = false;
                     adParameters = display.creative.adParameters || '';
 
-                    // This is a verizon o2shim "https://acds.prod.vidible.tv/o2shim"
-                    if (display.media?.fileURL?.includes('acds.prod.vidible.tv/o2shim')) {
-                        try {
-                            adParameters = decodeURIComponent(adParameters)
-                                .slice(6)
-                                .replaceAll('"', '"')
-                                .replaceAll('\n', '')
-                                .replaceAll('\t', '')
-                                .replaceAll('+', ' ');
-                        } catch (_) {
-                            // Not encoded
-                        }
+                    const mediaUrl = display.media?.fileURL ? new URL(display.media.fileURL) : { hostname: '' };
+                    switch (mediaUrl.hostname) {
+                        case 'acds.prod.vidible.tv':
+                            try {
+                                adParameters = decodeURIComponent(adParameters)
+                                    .slice(6)
+                                    .replaceAll('"', '"')
+                                    .replaceAll('\n', '')
+                                    .replaceAll('\t', '')
+                                    .replaceAll('+', ' ');
+                            } catch (_) {
+                                // Not encoded
+                            }
 
-                        response = await parseVAST({
-                            ...props,
-                            options: { ...this.options, adXml: adParameters, adTagUrl: '' },
-                        });
-                        display = this.getDisplayMedia(response);
-                        hasNestedVast = true;
-                        continue;
-                    }
+                            response = await parseVAST({
+                                ...props,
+                                options: { ...this.options, adXml: adParameters, adTagUrl: '' },
+                            });
+                            display = this.getDisplayMedia(response);
+                            hasNestedVast = true;
+                            break;
+                        case 'vpaid.doubleverify.com':
+                            subDocument = JSON.parse(adParameters).adParameters;
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'static.cwmflk.com':
+                            subParameters = {
+                                adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters),
+                            };
+                            try {
+                                do {
+                                    subParameters = JSON.parse(subParameters.adParameters);
+                                    subDocument = subParameters.adParameters;
+                                } while (typeof subParameters !== 'string');
+                            } catch (_) {
+                                // Silence the errors because the last
+                                // set of ad parameters will be a vast xml
+                            }
 
-                    if (display.media?.fileURL?.includes('vpaid.doubleverify.com')) {
-                        const subDocument = JSON.parse(adParameters).adParameters;
-                        display = await this.imaDocumentToMedia(subDocument, props);
-                        hasNestedVast = true;
-                        continue;
-                    }
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'static.adsafeprotected.com':
+                            try {
+                                // adsafe protected recursively json encodes the adparameters
+                                // and then wraps it with ima
+                                subParameters = { adParameters };
+                                do {
+                                    subParameters = JSON.parse(subParameters.adParameters);
+                                    subDocument = subParameters.adParameters;
+                                } while (typeof subParameters !== 'string');
+                            } catch (_) {
+                                // Silence the errors because the last
+                                // set of ad parameters will be a vast xml
+                            }
 
-                    if (display.media?.fileURL?.includes('static.cwmflk.com')) {
-                        let subDocument = '';
-                        let subParameters = { adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters) };
-                        try {
-                            do {
-                                subParameters = JSON.parse(subParameters.adParameters);
-                                subDocument = subParameters.adParameters;
-                            } while (typeof subParameters !== 'string');
-                        } catch (_) {
-                            // Silence the errors because the last
-                            // set of ad parameters will be a vast xml
-                        }
-
-                        display = await this.imaDocumentToMedia(subDocument, props);
-                        hasNestedVast = true;
-                        continue;
-                    }
-
-                    if (display.media?.fileURL?.includes('static.adsafeprotected.com')) {
-                        let subDocument = '';
-                        try {
-                            // adsafe protected recursively json encodes the adparameters
-                            // and then wraps it with ima
-                            let subParameters = { adParameters };
-                            do {
-                                subParameters = JSON.parse(subParameters.adParameters);
-                                subDocument = subParameters.adParameters;
-                            } while (typeof subParameters !== 'string');
-                        } catch (_) {
-                            // Silence the errors because the last
-                            // set of ad parameters will be a vast xml
-                        }
-
-                        display = await this.imaDocumentToMedia(subDocument, props);
-                        hasNestedVast = true;
-                        continue;
-                    }
-
-                    // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
-                    // Then the creative ad parameter is the actual vast document that we want to display
-                    if (display.media?.fileURL?.includes('imasdk.googleapis.com')) {
-                        display = await this.imaDocumentToMedia(adParameters, props);
-                        hasNestedVast = true;
-                        continue;
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'imasdk.googleapis.com':
+                            // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
+                            // Then the creative ad parameter is the actual vast document that we want to display
+                            display = await this.imaDocumentToMedia(adParameters, props);
+                            hasNestedVast = true;
+                            break;
                     }
                 } while (hasNestedVast);
             } finally {

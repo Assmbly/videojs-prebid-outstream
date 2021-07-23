@@ -1517,7 +1517,7 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+        var _a, _b;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
         let response = yield parseVAST(props);
@@ -1530,58 +1530,58 @@ function register(vjs = import_video.default) {
           let adParameters = "";
           let hasNestedVast = false;
           do {
+            let subDocument = "";
+            let subParameters = { adParameters: "" };
             hasNestedVast = false;
             adParameters = display.creative.adParameters || "";
-            if ((_b = (_a = display.media) == null ? void 0 : _a.fileURL) == null ? void 0 : _b.includes("acds.prod.vidible.tv/o2shim")) {
-              try {
-                adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
-              } catch (_) {
-              }
-              response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
-              }));
-              display = this.getDisplayMedia(response);
-              hasNestedVast = true;
-              continue;
-            }
-            if ((_d = (_c = display.media) == null ? void 0 : _c.fileURL) == null ? void 0 : _d.includes("vpaid.doubleverify.com")) {
-              const subDocument = JSON.parse(adParameters).adParameters;
-              display = yield this.imaDocumentToMedia(subDocument, props);
-              hasNestedVast = true;
-              continue;
-            }
-            if ((_f = (_e = display.media) == null ? void 0 : _e.fileURL) == null ? void 0 : _f.includes("static.cwmflk.com")) {
-              let subDocument = "";
-              let subParameters = { adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters) };
-              try {
-                do {
-                  subParameters = JSON.parse(subParameters.adParameters);
-                  subDocument = subParameters.adParameters;
-                } while (typeof subParameters !== "string");
-              } catch (_) {
-              }
-              display = yield this.imaDocumentToMedia(subDocument, props);
-              hasNestedVast = true;
-              continue;
-            }
-            if ((_h = (_g = display.media) == null ? void 0 : _g.fileURL) == null ? void 0 : _h.includes("static.adsafeprotected.com")) {
-              let subDocument = "";
-              try {
-                let subParameters = { adParameters };
-                do {
-                  subParameters = JSON.parse(subParameters.adParameters);
-                  subDocument = subParameters.adParameters;
-                } while (typeof subParameters !== "string");
-              } catch (_) {
-              }
-              display = yield this.imaDocumentToMedia(subDocument, props);
-              hasNestedVast = true;
-              continue;
-            }
-            if ((_j = (_i = display.media) == null ? void 0 : _i.fileURL) == null ? void 0 : _j.includes("imasdk.googleapis.com")) {
-              display = yield this.imaDocumentToMedia(adParameters, props);
-              hasNestedVast = true;
-              continue;
+            const mediaUrl = ((_a = display.media) == null ? void 0 : _a.fileURL) ? new URL(display.media.fileURL) : { hostname: "" };
+            switch (mediaUrl.hostname) {
+              case "acds.prod.vidible.tv":
+                try {
+                  adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
+                } catch (_) {
+                }
+                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                  options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
+                }));
+                display = this.getDisplayMedia(response);
+                hasNestedVast = true;
+                break;
+              case "vpaid.doubleverify.com":
+                subDocument = JSON.parse(adParameters).adParameters;
+                display = yield this.imaDocumentToMedia(subDocument, props);
+                hasNestedVast = true;
+                break;
+              case "static.cwmflk.com":
+                subParameters = {
+                  adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters)
+                };
+                try {
+                  do {
+                    subParameters = JSON.parse(subParameters.adParameters);
+                    subDocument = subParameters.adParameters;
+                  } while (typeof subParameters !== "string");
+                } catch (_) {
+                }
+                display = yield this.imaDocumentToMedia(subDocument, props);
+                hasNestedVast = true;
+                break;
+              case "static.adsafeprotected.com":
+                try {
+                  subParameters = { adParameters };
+                  do {
+                    subParameters = JSON.parse(subParameters.adParameters);
+                    subDocument = subParameters.adParameters;
+                  } while (typeof subParameters !== "string");
+                } catch (_) {
+                }
+                display = yield this.imaDocumentToMedia(subDocument, props);
+                hasNestedVast = true;
+                break;
+              case "imasdk.googleapis.com":
+                display = yield this.imaDocumentToMedia(adParameters, props);
+                hasNestedVast = true;
+                break;
             }
           } while (hasNestedVast);
         } finally {
@@ -1617,7 +1617,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_k = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _k.url) {
+        if ((_b = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _b.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
