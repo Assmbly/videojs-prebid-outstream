@@ -130,21 +130,83 @@ export default function register(vjs: typeof videojs = videojs) {
 
             try {
                 display = this.getDisplayMedia(response);
+                let adParameters = '';
+                let hasNestedVast = false;
 
-                // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
-                // Then the creative ad parameter is the actual vast document that we want to display
-                if (display.media.fileURL === 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js') {
-                    const dbmVast = display.creative.adParameters
-                        ?.replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .replace(/&quot;/g, '"')
-                        .replace(/&amp;/g, '&');
-                    response = await parseVAST({
-                        ...props,
-                        options: { ...this.options, adXml: dbmVast, adTagUrl: '' },
-                    });
-                    display = this.getDisplayMedia(response);
-                }
+                do {
+                    let subDocument = '';
+                    let subParameters = { adParameters: '' };
+                    hasNestedVast = false;
+                    adParameters = display.creative.adParameters || '';
+
+                    const mediaUrl = display.media?.fileURL ? new URL(display.media.fileURL) : { hostname: '' };
+                    switch (mediaUrl.hostname) {
+                        case 'acds.prod.vidible.tv':
+                            try {
+                                adParameters = decodeURIComponent(adParameters)
+                                    .slice(6)
+                                    .replaceAll('"', '"')
+                                    .replaceAll('\n', '')
+                                    .replaceAll('\t', '')
+                                    .replaceAll('+', ' ');
+                            } catch (_) {
+                                // Not encoded
+                            }
+
+                            response = await parseVAST({
+                                ...props,
+                                options: { ...this.options, adXml: adParameters, adTagUrl: '' },
+                            });
+                            display = this.getDisplayMedia(response);
+                            hasNestedVast = true;
+                            break;
+                        case 'vpaid.doubleverify.com':
+                            subDocument = JSON.parse(adParameters).adParameters;
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'static.cwmflk.com':
+                            subParameters = {
+                                adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters),
+                            };
+                            try {
+                                do {
+                                    subParameters = JSON.parse(subParameters.adParameters);
+                                    subDocument = subParameters.adParameters;
+                                } while (typeof subParameters !== 'string');
+                            } catch (_) {
+                                // Silence the errors because the last
+                                // set of ad parameters will be a vast xml
+                            }
+
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'static.adsafeprotected.com':
+                            try {
+                                // adsafe protected recursively json encodes the adparameters
+                                // and then wraps it with ima
+                                subParameters = { adParameters };
+                                do {
+                                    subParameters = JSON.parse(subParameters.adParameters);
+                                    subDocument = subParameters.adParameters;
+                                } while (typeof subParameters !== 'string');
+                            } catch (_) {
+                                // Silence the errors because the last
+                                // set of ad parameters will be a vast xml
+                            }
+
+                            display = await this.imaDocumentToMedia(subDocument, props);
+                            hasNestedVast = true;
+                            break;
+                        case 'imasdk.googleapis.com':
+                            // If the media is a dv360 video, characterized by ima sdk vpaid adapter as the file url,
+                            // Then the creative ad parameter is the actual vast document that we want to display
+                            display = await this.imaDocumentToMedia(adParameters, props);
+                            hasNestedVast = true;
+                            break;
+                    }
+                } while (hasNestedVast);
             } finally {
                 // Revert player source order
                 this.player.options({ sourceOrder: originalSourceOrder });
@@ -267,11 +329,19 @@ export default function register(vjs: typeof videojs = videojs) {
                     }
 
                     // Give VPAID preference
-                    let media = creative.mediaFiles.find((m) => m.apiFramework === 'VPAID');
+                    let media = creative.mediaFiles
+                        .filter(
+                            (mediaFile) =>
+                                !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
+                        )
+                        .find((m) => m.apiFramework === 'VPAID');
                     if (!media) {
                         // Sort mediafiles by euclidean distance to player size
                         const sortedFiles = creative.mediaFiles
-                            .filter((mediaFile) => mediaFile.mimeType !== 'video/x-flv')
+                            .filter(
+                                (mediaFile) =>
+                                    !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
+                            )
                             .sort((a, b) => {
                                 const distanceA = Math.hypot(
                                     a.width - this.player.width(),
@@ -307,6 +377,19 @@ export default function register(vjs: typeof videojs = videojs) {
             }
 
             return {};
+        }
+
+        async imaDocumentToMedia(imaDocument: string, props: BaseProps): Promise<DisplayMedia | Record<string, never>> {
+            const adXml = imaDocument
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&');
+            const response = await parseVAST({
+                ...props,
+                options: { ...this.options, adXml, adTagUrl: '' },
+            });
+            return this.getDisplayMedia(response);
         }
     };
 
