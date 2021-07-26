@@ -1537,7 +1537,7 @@ function register(vjs = import_video.default) {
             const mediaUrl = ((_a = display.media) == null ? void 0 : _a.fileURL) ? new URL(display.media.fileURL) : { hostname: "" };
             this.logger.debug("parsing vast for host", mediaUrl.hostname);
             switch (mediaUrl.hostname) {
-              case "acdn.adnxs-simple.com":
+              case "acdn.adnxs-simple.com": {
                 let adXml = "";
                 const meta = JSON.parse(adParameters);
                 const vastTagUri = meta.vastAdTagURI;
@@ -1553,6 +1553,7 @@ function register(vjs = import_video.default) {
                 display = this.getDisplayMedia(response);
                 hasNestedVast = true;
                 break;
+              }
               case "acds.prod.vidible.tv":
                 try {
                   adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
@@ -1564,7 +1565,7 @@ function register(vjs = import_video.default) {
                 display = this.getDisplayMedia(response);
                 hasNestedVast = true;
                 break;
-              case "vpaid.doubleverify.com":
+              case "vpaid.doubleverify.com": {
                 const dvParams = JSON.parse(adParameters);
                 subDocument = dvParams.adParameters;
                 if (subDocument) {
@@ -1581,6 +1582,7 @@ function register(vjs = import_video.default) {
                   }
                 }
                 break;
+              }
               case "static.cwmflk.com":
                 subParameters = {
                   adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters)

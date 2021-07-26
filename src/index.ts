@@ -142,14 +142,16 @@ export default function register(vjs: typeof videojs = videojs) {
                     const mediaUrl = display.media?.fileURL ? new URL(display.media.fileURL) : { hostname: '' };
                     this.logger.debug('parsing vast for host', mediaUrl.hostname);
                     switch (mediaUrl.hostname) {
-                        case 'acdn.adnxs-simple.com':
-                            let adXml = ''
-                            const meta = JSON.parse(adParameters)
+                        case 'acdn.adnxs-simple.com': {
+                            let adXml = '';
+                            const meta = JSON.parse(adParameters);
                             const vastTagUri = meta.vastAdTagURI;
                             if (!vastTagUri) {
-                                const encoded = meta.ads?.[0]?.rtb?.content_b64
+                                const encoded = meta.ads?.[0]?.rtb?.content_b64;
                                 if (encoded) {
-                                    adXml = atob(encoded.replaceAll('-', '+').replaceAll('_', '/').replaceAll('.','='));
+                                    adXml = atob(
+                                        encoded.replaceAll('-', '+').replaceAll('_', '/').replaceAll('.', '=')
+                                    );
                                 }
                             }
                             response = await parseVAST({
@@ -159,6 +161,7 @@ export default function register(vjs: typeof videojs = videojs) {
                             display = this.getDisplayMedia(response);
                             hasNestedVast = true;
                             break;
+                        }
                         case 'acds.prod.vidible.tv':
                             try {
                                 adParameters = decodeURIComponent(adParameters)
@@ -178,24 +181,27 @@ export default function register(vjs: typeof videojs = videojs) {
                             display = this.getDisplayMedia(response);
                             hasNestedVast = true;
                             break;
-                        case 'vpaid.doubleverify.com':
-                            const dvParams = JSON.parse(adParameters)
+                        case 'vpaid.doubleverify.com': {
+                            const dvParams = JSON.parse(adParameters);
                             subDocument = dvParams.adParameters;
                             if (subDocument) {
                                 display = await this.imaDocumentToMedia(subDocument, props);
                                 hasNestedVast = true;
                             } else if (dvParams.mediaFiles) {
-                                const media = this.selectMedia(dvParams.mediaFiles.map((file: any) => {
-                                    file.mimeType = file.type
-                                    file.fileURL = file.uri
-                                    return file
-                                }))
+                                const media = this.selectMedia(
+                                    dvParams.mediaFiles.map((file: any) => {
+                                        file.mimeType = file.type;
+                                        file.fileURL = file.uri;
+                                        return file;
+                                    })
+                                );
 
                                 if (media) {
-                                    display.media = media
+                                    display.media = media;
                                 }
                             }
                             break;
+                        }
                         case 'static.cwmflk.com':
                             subParameters = {
                                 adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters),
@@ -367,7 +373,7 @@ export default function register(vjs: typeof videojs = videojs) {
                         )
                         .find((m) => m.apiFramework === 'VPAID');
                     if (!media) {
-                        media = this.selectMedia(creative.mediaFiles)
+                        media = this.selectMedia(creative.mediaFiles);
                     }
 
                     if (media) {
@@ -386,32 +392,25 @@ export default function register(vjs: typeof videojs = videojs) {
         selectMedia(files: VastMediaFile[]): VastMediaFile | undefined {
             // Sort mediafiles by euclidean distance to player size
             const sortedFiles = files
-            .filter(
-                (mediaFile) =>
-                    !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
-            )
-            .sort((a, b) => {
-                const distanceA = Math.hypot(
-                    a.width - this.player.width(),
-                    a.height - this.player.height()
-                );
-                const distanceB = Math.hypot(
-                    b.width - this.player.width(),
-                    b.height - this.player.height()
-                );
-                return distanceA - distanceB;
-            });
+                .filter(
+                    (mediaFile) => !['video/x-flv', 'application/x-shockwave-flash'].includes(mediaFile.mimeType || '')
+                )
+                .sort((a, b) => {
+                    const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
+                    const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
+                    return distanceA - distanceB;
+                });
 
-        const sources = sortedFiles.map<videojs.Tech.SourceObject>((mediaFile, index) => ({
-            src: mediaFile.fileURL || '',
-            type: mediaFile.mimeType || undefined,
-            index,
-        }));
+            const sources = sortedFiles.map<videojs.Tech.SourceObject>((mediaFile, index) => ({
+                src: mediaFile.fileURL || '',
+                type: mediaFile.mimeType || undefined,
+                index,
+            }));
 
-        const source = this.player.selectSource(sources);
-        if (source) {
-            return sortedFiles[source.source.index];
-        }
+            const source = this.player.selectSource(sources);
+            if (source) {
+                return sortedFiles[source.source.index];
+            }
         }
 
         async imaDocumentToMedia(imaDocument: string, props: BaseProps): Promise<DisplayMedia | Record<string, never>> {
