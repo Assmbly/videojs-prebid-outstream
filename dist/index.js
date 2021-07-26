@@ -1517,7 +1517,7 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b;
+        var _a, _b, _c, _d, _e;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
         let response = yield parseVAST(props);
@@ -1535,7 +1535,24 @@ function register(vjs = import_video.default) {
             hasNestedVast = false;
             adParameters = display.creative.adParameters || "";
             const mediaUrl = ((_a = display.media) == null ? void 0 : _a.fileURL) ? new URL(display.media.fileURL) : { hostname: "" };
+            this.logger.debug("parsing vast for host", mediaUrl.hostname);
             switch (mediaUrl.hostname) {
+              case "acdn.adnxs-simple.com":
+                let adXml = "";
+                const meta = JSON.parse(adParameters);
+                const vastTagUri = meta.vastAdTagURI;
+                if (!vastTagUri) {
+                  const encoded = (_d = (_c = (_b = meta.ads) == null ? void 0 : _b[0]) == null ? void 0 : _c.rtb) == null ? void 0 : _d.content_b64;
+                  if (encoded) {
+                    adXml = atob(encoded.replaceAll("-", "+").replaceAll("_", "/").replaceAll(".", "="));
+                  }
+                }
+                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                  options: __spreadProps(__spreadValues({}, this.options), { adXml, adTagUrl: vastTagUri })
+                }));
+                display = this.getDisplayMedia(response);
+                hasNestedVast = true;
+                break;
               case "acds.prod.vidible.tv":
                 try {
                   adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
@@ -1548,9 +1565,21 @@ function register(vjs = import_video.default) {
                 hasNestedVast = true;
                 break;
               case "vpaid.doubleverify.com":
-                subDocument = JSON.parse(adParameters).adParameters;
-                display = yield this.imaDocumentToMedia(subDocument, props);
-                hasNestedVast = true;
+                const dvParams = JSON.parse(adParameters);
+                subDocument = dvParams.adParameters;
+                if (subDocument) {
+                  display = yield this.imaDocumentToMedia(subDocument, props);
+                  hasNestedVast = true;
+                } else if (dvParams.mediaFiles) {
+                  const media = this.selectMedia(dvParams.mediaFiles.map((file) => {
+                    file.mimeType = file.type;
+                    file.fileURL = file.uri;
+                    return file;
+                  }));
+                  if (media) {
+                    display.media = media;
+                  }
+                }
                 break;
               case "static.cwmflk.com":
                 subParameters = {
@@ -1617,7 +1646,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_b = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _b.url) {
+        if ((_e = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _e.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
@@ -1698,20 +1727,7 @@ function register(vjs = import_video.default) {
           }
           let media = creative.mediaFiles.filter((mediaFile) => !["video/x-flv", "application/x-shockwave-flash"].includes(mediaFile.mimeType || "")).find((m) => m.apiFramework === "VPAID");
           if (!media) {
-            const sortedFiles = creative.mediaFiles.filter((mediaFile) => !["video/x-flv", "application/x-shockwave-flash"].includes(mediaFile.mimeType || "")).sort((a, b) => {
-              const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
-              const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
-              return distanceA - distanceB;
-            });
-            const sources = sortedFiles.map((mediaFile, index) => ({
-              src: mediaFile.fileURL || "",
-              type: mediaFile.mimeType || void 0,
-              index
-            }));
-            const source = this.player.selectSource(sources);
-            if (source) {
-              media = sortedFiles[source.source.index];
-            }
+            media = this.selectMedia(creative.mediaFiles);
           }
           if (media) {
             return {
@@ -1723,6 +1739,22 @@ function register(vjs = import_video.default) {
         }
       }
       return {};
+    }
+    selectMedia(files) {
+      const sortedFiles = files.filter((mediaFile) => !["video/x-flv", "application/x-shockwave-flash"].includes(mediaFile.mimeType || "")).sort((a, b) => {
+        const distanceA = Math.hypot(a.width - this.player.width(), a.height - this.player.height());
+        const distanceB = Math.hypot(b.width - this.player.width(), b.height - this.player.height());
+        return distanceA - distanceB;
+      });
+      const sources = sortedFiles.map((mediaFile, index) => ({
+        src: mediaFile.fileURL || "",
+        type: mediaFile.mimeType || void 0,
+        index
+      }));
+      const source = this.player.selectSource(sources);
+      if (source) {
+        return sortedFiles[source.source.index];
+      }
     }
     imaDocumentToMedia(imaDocument, props) {
       return __async(this, null, function* () {
