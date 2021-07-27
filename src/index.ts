@@ -395,8 +395,8 @@ export default function register(vjs: typeof videojs = videojs) {
             const isPlayerVisible =
                 playerLocation.top >= 0 &&
                 playerLocation.left >= minLeft &&
-                playerLocation.bottom <= windowHeight &&
-                playerLocation.right <= windowWidth;
+                playerLocation.bottom <= windowHeight + 5 &&
+                playerLocation.right <= windowWidth + 5;
 
             if (isPlayerVisible && !document.hidden && this.player.paused()) {
                 // TODO Silence "uncaught play promise" error messages
