@@ -32,9 +32,8 @@ interface DisplayMedia {
     media: VastMediaFile;
 }
 
-// TODO
-// When destroyed, clear all listeners on window
-// When destroyed, clear vpaid container
+const VISIBILITY_BUFFER = 5;
+
 export default function register(vjs: typeof videojs = videojs) {
     const vjsPlugin = vjs.getPlugin('plugin');
 
@@ -395,8 +394,8 @@ export default function register(vjs: typeof videojs = videojs) {
             const isPlayerVisible =
                 playerLocation.top >= 0 &&
                 playerLocation.left >= minLeft &&
-                playerLocation.bottom <= windowHeight + 5 &&
-                playerLocation.right <= windowWidth + 5;
+                playerLocation.bottom <= windowHeight + VISIBILITY_BUFFER &&
+                playerLocation.right <= windowWidth + VISIBILITY_BUFFER;
 
             if (isPlayerVisible && !document.hidden && this.player.paused()) {
                 // TODO Silence "uncaught play promise" error messages

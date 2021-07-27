@@ -1491,6 +1491,7 @@ function createTracker({ player, logger, display: { creative, ad } }) {
 }
 
 // src/index.ts
+var VISIBILITY_BUFFER = 5;
 function register(vjs = import_video.default) {
   const vjsPlugin = vjs.getPlugin("plugin");
   const Plugin = class Plugin extends vjsPlugin {
@@ -1719,7 +1720,7 @@ function register(vjs = import_video.default) {
         const windowHeight = window.innerHeight || document.documentElement.clientHeight;
         const minLeft = windowWidth - this.player.width() > 0 ? 0 : windowWidth - this.player.width();
         const playerLocation = this.player.el().getBoundingClientRect();
-        const isPlayerVisible = playerLocation.top >= 0 && playerLocation.left >= minLeft && playerLocation.bottom <= windowHeight + 5 && playerLocation.right <= windowWidth + 5;
+        const isPlayerVisible = playerLocation.top >= 0 && playerLocation.left >= minLeft && playerLocation.bottom <= windowHeight + VISIBILITY_BUFFER && playerLocation.right <= windowWidth + VISIBILITY_BUFFER;
         if (isPlayerVisible && !document.hidden && this.player.paused()) {
           this.player.play();
         }
