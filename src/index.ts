@@ -140,7 +140,7 @@ export default function register(vjs: typeof videojs = videojs) {
                     adParameters = display.creative.adParameters || '';
 
                     const mediaUrl = display.media?.fileURL ? new URL(display.media.fileURL) : { hostname: '' };
-                    this.logger.debug('parsing vast for host', mediaUrl.hostname);
+                    this.logger.debug('parsing vast for host', mediaUrl.hostname, adParameters);
 
                     // TODO - Verify viewability detection and measurements are working correctly
                     switch (mediaUrl.hostname) {
@@ -185,12 +185,33 @@ export default function register(vjs: typeof videojs = videojs) {
                             break;
                         case 's.yimg.com': {
                             const yParameters = JSON.parse(adParameters);
-                            response = await parseVAST({
-                                ...props,
-                                options: { ...this.options, adXml: adParameters, adTagUrl: yParameters.vastAdTagURI },
-                            });
-                            display = this.getDisplayMedia(response);
-                            hasNestedVast = true;
+                            if (yParameters.mediaFiles) {
+                                const media = this.selectMedia(
+                                    subParameters.mediaFiles.map((file) => ({
+                                        ...file,
+                                        mimeType: file.type,
+                                        deliveryType: file.delivery,
+                                        fileURL: file.value,
+                                        minBitrate: file.minBitrate || 0,
+                                        maxBitrate: file.maxBitrate || 16,
+                                    }))
+                                );
+
+                                if (media) {
+                                    display.media = media;
+                                }
+                            } else if (yParameters.vastAdTagURI) {
+                                response = await parseVAST({
+                                    ...props,
+                                    options: {
+                                        ...this.options,
+                                        adXml: adParameters,
+                                        adTagUrl: yParameters.vastAdTagURI,
+                                    },
+                                });
+                                display = this.getDisplayMedia(response);
+                                hasNestedVast = true;
+                            }
                             break;
                         }
                         case 'vpaid.doubleverify.com': {
@@ -298,6 +319,20 @@ export default function register(vjs: typeof videojs = videojs) {
                                     ...this.options,
                                     adXml: '',
                                     adTagUrl: acpParams?.Ad_Context?.MediaSrc || '',
+                                },
+                            });
+                            display = this.getDisplayMedia(response);
+                            hasNestedVast = true;
+                            break;
+                        }
+                        case 'vpaid.pubmatic.com': {
+                            const adXml = decodeURIComponent(adParameters);
+                            response = await parseVAST({
+                                ...props,
+                                options: {
+                                    ...this.options,
+                                    adXml,
+                                    adTagUrl: '',
                                 },
                             });
                             display = this.getDisplayMedia(response);
