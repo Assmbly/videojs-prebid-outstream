@@ -17,4 +17,5 @@ interface VPAIDMediaFile {
     codec: string | null;
     minBitrate?: number;
     maxBitrate?: number;
+    value: string;
 }
