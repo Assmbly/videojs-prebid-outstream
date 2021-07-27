@@ -90,7 +90,7 @@ export default function register(vjs: typeof videojs = videojs) {
             };
 
             this.logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
-            this.logger.debug('staring pop plugin...')
+            this.logger.debug('staring pop plugin...');
             this.handleError(this.setup);
         }
 
