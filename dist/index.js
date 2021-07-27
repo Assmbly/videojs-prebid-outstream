@@ -1233,6 +1233,11 @@ function displayVPAID({
     throw new Error("unable to write iframe");
   }
   const startVPAIDTimeout = setTimeout(() => {
+    handleError(() => __async(this, null, function* () {
+      if (player && player.paused()) {
+        throw new VastError(VPAID_ERROR, "VPAID is not playing");
+      }
+    }));
   }, options.maxVPAIDAdStart);
   player.on("dispose", () => {
     clearTimeout(startVPAIDTimeout);
@@ -1513,7 +1518,7 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
         let response = yield parseVAST(props);
@@ -1576,7 +1581,10 @@ function register(vjs = import_video.default) {
                   }
                 } else if (yParameters.vastAdTagURI) {
                   response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                    options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: yParameters.vastAdTagURI })
+                    options: __spreadProps(__spreadValues({}, this.options), {
+                      adXml: adParameters,
+                      adTagUrl: yParameters.vastAdTagURI
+                    })
                   }));
                   display = this.getDisplayMedia(response);
                   hasNestedVast = true;
@@ -1586,7 +1594,7 @@ function register(vjs = import_video.default) {
               case "vpaid.doubleverify.com": {
                 subParameters = JSON.parse(adParameters);
                 subDocument = subParameters.adParameters;
-                if (subParameters.mediaFiles) {
+                if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
                   const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
@@ -1627,7 +1635,7 @@ function register(vjs = import_video.default) {
                   } while (typeof subParameters !== "string");
                 } catch (_) {
                 }
-                if (subParameters.mediaFiles) {
+                if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
                   const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
@@ -1683,6 +1691,19 @@ function register(vjs = import_video.default) {
                 hasNestedVast = true;
                 break;
               }
+              case "js.brealtime.com": {
+                const brealParams = JSON.parse(adParameters);
+                const adXml = decodeURIComponent((_f = brealParams.ad) == null ? void 0 : _f.tag);
+                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
+                  options: __spreadProps(__spreadValues({}, this.options), {
+                    adXml,
+                    adTagUrl: ""
+                  })
+                }));
+                display = this.getDisplayMedia(response);
+                hasNestedVast = true;
+                break;
+              }
             }
           } while (hasNestedVast);
         } finally {
@@ -1718,7 +1739,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_f = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _f.url) {
+        if ((_g = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _g.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
