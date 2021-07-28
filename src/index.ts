@@ -217,7 +217,7 @@ export default function register(vjs: typeof videojs = videojs) {
                         case 'vpaid.doubleverify.com': {
                             subParameters = JSON.parse(adParameters);
                             subDocument = subParameters.adParameters;
-                            if (subParameters.mediaFiles) {
+                            if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
                                 const media = this.selectMedia(
                                     subParameters.mediaFiles.map((file) => ({
                                         ...file,
@@ -270,7 +270,7 @@ export default function register(vjs: typeof videojs = videojs) {
                                 // set of ad parameters will be a vast xml
                             }
 
-                            if (subParameters.mediaFiles) {
+                            if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
                                 const media = this.selectMedia(
                                     subParameters.mediaFiles.map((file) => ({
                                         ...file,
@@ -327,6 +327,21 @@ export default function register(vjs: typeof videojs = videojs) {
                         }
                         case 'vpaid.pubmatic.com': {
                             const adXml = decodeURIComponent(adParameters);
+                            response = await parseVAST({
+                                ...props,
+                                options: {
+                                    ...this.options,
+                                    adXml,
+                                    adTagUrl: '',
+                                },
+                            });
+                            display = this.getDisplayMedia(response);
+                            hasNestedVast = true;
+                            break;
+                        }
+                        case 'js.brealtime.com': {
+                            const brealParams = JSON.parse(adParameters);
+                            const adXml = decodeURIComponent(brealParams.ad?.tag);
                             response = await parseVAST({
                                 ...props,
                                 options: {
