@@ -18,4 +18,5 @@ interface VPAIDMediaFile {
     minBitrate?: number;
     maxBitrate?: number;
     value: string;
+    url: string;
 }
