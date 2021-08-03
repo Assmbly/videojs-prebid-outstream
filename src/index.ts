@@ -97,7 +97,7 @@ export default function register(vjs: typeof videojs = videojs) {
             try {
                 await main();
             } catch (e) {
-                const error = `POP: ${e.message || e}`;
+                const error = `POP: ${e.vastErrorCode}: ${e.message || e}`;
                 this.logger.error('Exception caught: ', error, this);
                 this.player.error_ = error;
 
@@ -136,6 +136,7 @@ export default function register(vjs: typeof videojs = videojs) {
                 do {
                     let subDocument = '';
                     let subParameters: VPAIDWrapper = { adParameters: '', mediaFiles: [] };
+                    let mediaFiles: VPAIDMediaFile[] = [];
                     hasNestedVast = false;
                     adParameters = display.creative.adParameters || '';
 
@@ -185,9 +186,14 @@ export default function register(vjs: typeof videojs = videojs) {
                             break;
                         case 's.yimg.com': {
                             const yParameters = JSON.parse(adParameters);
-                            if (yParameters.mediaFiles) {
+                            mediaFiles =
+                                yParameters.mediaFiles?.filter(
+                                    (file: VPAIDMediaFile) =>
+                                        file.value !== 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js'
+                                ) || [];
+                            if (mediaFiles.length > 0) {
                                 const media = this.selectMedia(
-                                    subParameters.mediaFiles.map((file) => ({
+                                    mediaFiles.map((file) => ({
                                         ...file,
                                         mimeType: file.type,
                                         deliveryType: file.delivery,
@@ -217,9 +223,14 @@ export default function register(vjs: typeof videojs = videojs) {
                         case 'vpaid.doubleverify.com': {
                             subParameters = JSON.parse(adParameters);
                             subDocument = subParameters.adParameters;
-                            if (subParameters.mediaFiles) {
+                            mediaFiles =
+                                subParameters.mediaFiles?.filter(
+                                    (file) => file.uri !== 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js'
+                                ) || [];
+                            if (mediaFiles.length > 0) {
+                                this.logger.debug('mediafile', mediaFiles);
                                 const media = this.selectMedia(
-                                    subParameters.mediaFiles.map((file) => ({
+                                    mediaFiles.map((file) => ({
                                         ...file,
                                         mimeType: file.type,
                                         deliveryType: file.delivery,
@@ -250,9 +261,13 @@ export default function register(vjs: typeof videojs = videojs) {
                                 // set of ad parameters will be a vast xml
                             }
 
-                            if (subParameters.mediaFiles) {
+                            mediaFiles =
+                                subParameters.mediaFiles?.filter(
+                                    (file) => file.url !== 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js'
+                                ) || [];
+                            if (mediaFiles.length > 0) {
                                 const media = this.selectMedia(
-                                    subParameters.mediaFiles.map((file) => ({
+                                    mediaFiles.map((file) => ({
                                         ...file,
                                         mimeType: file.type,
                                         fileURL: file.url,
@@ -284,9 +299,13 @@ export default function register(vjs: typeof videojs = videojs) {
                                 // set of ad parameters will be a vast xml
                             }
 
-                            if (subParameters.mediaFiles) {
+                            mediaFiles =
+                                subParameters.mediaFiles?.filter(
+                                    (file) => file.uri !== 'https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js'
+                                ) || [];
+                            if (mediaFiles.length > 0) {
                                 const media = this.selectMedia(
-                                    subParameters.mediaFiles.map((file) => ({
+                                    mediaFiles.map((file) => ({
                                         ...file,
                                         mimeType: file.type,
                                         deliveryType: file.delivery,

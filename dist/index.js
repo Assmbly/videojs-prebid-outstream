@@ -1224,13 +1224,16 @@ function displayVPAID({
 }) {
   logger.debug("Displaying VPAID...");
   player.trigger("adVPAIDSelected");
-  const startVPAIDTimeout = setTimeout(() => {
-    handleError(() => __async(this, null, function* () {
-      if (player && player.paused()) {
-        throw new VastError(VPAID_ERROR, "VPAID is not playing");
-      }
-    }));
-  }, options.maxVPAIDAdStart);
+  let startVPAIDTimeout = -1;
+  if (options.maxVPAIDAdStart >= 0) {
+    startVPAIDTimeout = window.setTimeout(() => {
+      handleError(() => __async(this, null, function* () {
+        if (player && player.paused()) {
+          throw new VastError(VPAID_ERROR, "VPAID is not playing");
+        }
+      }));
+    }, options.maxVPAIDAdStart);
+  }
   player.on("dispose", () => {
     clearTimeout(startVPAIDTimeout);
   });
@@ -1509,7 +1512,7 @@ function register(vjs = import_video.default) {
         try {
           yield main();
         } catch (e) {
-          const error = `POP: ${e.message || e}`;
+          const error = `POP: ${e.vastErrorCode}: ${e.message || e}`;
           this.logger.error("Exception caught: ", error, this);
           this.player.error_ = error;
           if (e instanceof VastError) {
@@ -1522,7 +1525,7 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
         let response = yield parseVAST(props);
@@ -1537,6 +1540,7 @@ function register(vjs = import_video.default) {
           do {
             let subDocument = "";
             let subParameters = { adParameters: "", mediaFiles: [] };
+            let mediaFiles = [];
             hasNestedVast = false;
             adParameters = display.creative.adParameters || "";
             const mediaUrl = ((_a = display.media) == null ? void 0 : _a.fileURL) ? new URL(display.media.fileURL) : { hostname: "" };
@@ -1572,8 +1576,9 @@ function register(vjs = import_video.default) {
                 break;
               case "s.yimg.com": {
                 const yParameters = JSON.parse(adParameters);
-                if (yParameters.mediaFiles) {
-                  const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
+                mediaFiles = ((_e = yParameters.mediaFiles) == null ? void 0 : _e.filter((file) => file.value !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
+                if (mediaFiles.length > 0) {
+                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
                     fileURL: file.value,
@@ -1598,8 +1603,10 @@ function register(vjs = import_video.default) {
               case "vpaid.doubleverify.com": {
                 subParameters = JSON.parse(adParameters);
                 subDocument = subParameters.adParameters;
-                if (subParameters.mediaFiles) {
-                  const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
+                mediaFiles = ((_f = subParameters.mediaFiles) == null ? void 0 : _f.filter((file) => file.uri !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
+                if (mediaFiles.length > 0) {
+                  this.logger.debug("mediafile", mediaFiles);
+                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
                     fileURL: file.uri,
@@ -1624,8 +1631,9 @@ function register(vjs = import_video.default) {
                   } while (typeof subParameters !== "string");
                 } catch (_) {
                 }
-                if (subParameters.mediaFiles) {
-                  const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
+                mediaFiles = ((_g = subParameters.mediaFiles) == null ? void 0 : _g.filter((file) => file.url !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
+                if (mediaFiles.length > 0) {
+                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     fileURL: file.url,
                     deliveryType: "progressive",
@@ -1649,8 +1657,9 @@ function register(vjs = import_video.default) {
                   } while (typeof subParameters !== "string");
                 } catch (_) {
                 }
-                if (subParameters.mediaFiles) {
-                  const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
+                mediaFiles = ((_h = subParameters.mediaFiles) == null ? void 0 : _h.filter((file) => file.uri !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
+                if (mediaFiles.length > 0) {
+                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
                     fileURL: file.uri,
@@ -1689,7 +1698,7 @@ function register(vjs = import_video.default) {
                 response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
                   options: __spreadProps(__spreadValues({}, this.options), {
                     adXml: "",
-                    adTagUrl: ((_e = acpParams == null ? void 0 : acpParams.Ad_Context) == null ? void 0 : _e.MediaSrc) || ""
+                    adTagUrl: ((_i = acpParams == null ? void 0 : acpParams.Ad_Context) == null ? void 0 : _i.MediaSrc) || ""
                   })
                 }));
                 display = this.getDisplayMedia(response);
@@ -1710,7 +1719,7 @@ function register(vjs = import_video.default) {
               }
               case "js.brealtime.com": {
                 const brealParams = JSON.parse(adParameters);
-                const adXml = decodeURIComponent((_f = brealParams.ad) == null ? void 0 : _f.tag);
+                const adXml = decodeURIComponent((_j = brealParams.ad) == null ? void 0 : _j.tag);
                 response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
                   options: __spreadProps(__spreadValues({}, this.options), {
                     adXml,
@@ -1756,7 +1765,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_g = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _g.url) {
+        if ((_k = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _k.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;

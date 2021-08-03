@@ -23,15 +23,18 @@ export function displayVPAID({
 }: VPAIDProps) {
     logger.debug('Displaying VPAID...');
     player.trigger('adVPAIDSelected');
+    let startVPAIDTimeout = -1;
 
     // Failsafe to check if VPAID loaded and video played
-    const startVPAIDTimeout = setTimeout(() => {
-        handleError(async () => {
-            if (player && player.paused()) {
-                throw new VastError(VPAID_ERROR, 'VPAID is not playing');
-            }
-        });
-    }, options.maxVPAIDAdStart);
+    if (options.maxVPAIDAdStart! >= 0) {
+        startVPAIDTimeout = window.setTimeout(() => {
+            handleError(async () => {
+                if (player && player.paused()) {
+                    throw new VastError(VPAID_ERROR, 'VPAID is not playing');
+                }
+            });
+        }, options.maxVPAIDAdStart);
+    }
 
     player.on('dispose', () => {
         clearTimeout(startVPAIDTimeout);
