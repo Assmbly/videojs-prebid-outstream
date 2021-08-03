@@ -217,7 +217,7 @@ export default function register(vjs: typeof videojs = videojs) {
                         case 'vpaid.doubleverify.com': {
                             subParameters = JSON.parse(adParameters);
                             subDocument = subParameters.adParameters;
-                            if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
+                            if (subParameters.mediaFiles) {
                                 const media = this.selectMedia(
                                     subParameters.mediaFiles.map((file) => ({
                                         ...file,
@@ -239,13 +239,10 @@ export default function register(vjs: typeof videojs = videojs) {
                             break;
                         }
                         case 'static.cwmflk.com':
-                            subParameters = {
-                                adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters),
-                                mediaFiles: [],
-                            };
+                            subParameters = JSON.parse(adParameters);
                             try {
                                 do {
-                                    subParameters = JSON.parse(subParameters.adParameters);
+                                    subParameters = JSON.parse(decodeURIComponent(subParameters.adParameters));
                                     subDocument = subParameters.adParameters;
                                 } while (typeof subParameters !== 'string');
                             } catch (_) {
@@ -253,8 +250,25 @@ export default function register(vjs: typeof videojs = videojs) {
                                 // set of ad parameters will be a vast xml
                             }
 
-                            display = await this.imaDocumentToMedia(subDocument, props);
-                            hasNestedVast = true;
+                            if (subParameters.mediaFiles) {
+                                const media = this.selectMedia(
+                                    subParameters.mediaFiles.map((file) => ({
+                                        ...file,
+                                        mimeType: file.type,
+                                        fileURL: file.url,
+                                        deliveryType: 'progressive',
+                                        minBitrate: file.minBitrate || 0,
+                                        maxBitrate: file.maxBitrate || 16,
+                                    }))
+                                );
+
+                                if (media) {
+                                    display.media = media;
+                                }
+                            } else if (subDocument) {
+                                display = await this.imaDocumentToMedia(subDocument, props);
+                                hasNestedVast = true;
+                            }
                             break;
                         case 'static.adsafeprotected.com':
                             try {
@@ -270,7 +284,7 @@ export default function register(vjs: typeof videojs = videojs) {
                                 // set of ad parameters will be a vast xml
                             }
 
-                            if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
+                            if (subParameters.mediaFiles) {
                                 const media = this.selectMedia(
                                     subParameters.mediaFiles.map((file) => ({
                                         ...file,
@@ -312,6 +326,10 @@ export default function register(vjs: typeof videojs = videojs) {
                             break;
                         }
                         case 'origin.acuityplatform.com': {
+                            if (!adParameters) {
+                                break;
+                            }
+
                             const acpParams = JSON.parse(adParameters);
                             response = await parseVAST({
                                 ...props,
