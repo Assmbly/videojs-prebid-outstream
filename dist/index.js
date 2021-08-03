@@ -1224,14 +1224,6 @@ function displayVPAID({
 }) {
   logger.debug("Displaying VPAID...");
   player.trigger("adVPAIDSelected");
-  const iframe = document.createElement("iframe");
-  iframe.id = `${creative.id}_${Date.now()}`;
-  iframe.className = "vjs-pop-vpaid-container";
-  player.el().appendChild(iframe);
-  const iframeDoc = iframe.contentDocument;
-  if (!iframeDoc) {
-    throw new Error("unable to write iframe");
-  }
   const startVPAIDTimeout = setTimeout(() => {
     handleError(() => __async(this, null, function* () {
       if (player && player.paused()) {
@@ -1245,39 +1237,51 @@ function displayVPAID({
   tracker.on("creativeView", () => {
     clearTimeout(startVPAIDTimeout);
   });
-  const handleVastError = (main) => {
-    return () => {
+  const iframe = document.createElement("iframe");
+  iframe.id = `${creative.id}_${Date.now()}`;
+  iframe.className = "vjs-pop-vpaid-container";
+  iframe.onload = () => {
+    const iframeDoc = iframe.contentDocument;
+    if (!iframeDoc) {
       handleError(() => __async(this, null, function* () {
-        try {
-          main();
-        } catch (e) {
-          clearTimeout(startVPAIDTimeout);
-          const message = typeof e === "string" ? e : e.message;
-          throw new VastError(VPAID_ERROR, message);
-        }
+        throw new Error("unable to write iframe");
       }));
-    };
-  };
-  const script = iframeDoc.createElement("script");
-  script.src = media.fileURL || "";
-  script.onload = handleVastError(() => {
-    var _a, _b;
-    logger.debug("VPAID script has loaded...");
-    const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
-    if (!adunit) {
-      throw new Error("no VPAID adunit found");
     }
-    logger.debug("Subscribing to VPAID adunit events");
-    const wrapper = new VPAIDWrapper(adunit, tracker);
-    wrapper.registerCallbacks();
-    logger.debug("Initializing VPAID adunit...");
-    adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
-      slot: iframeDoc.body,
-      videoSlot: player.el().querySelector("video"),
-      videoSlotCanAutoPlay: !!player.autoplay()
+    const handleVastError = (main) => {
+      return () => {
+        handleError(() => __async(this, null, function* () {
+          try {
+            main();
+          } catch (e) {
+            clearTimeout(startVPAIDTimeout);
+            const message = typeof e === "string" ? e : e.message;
+            throw new VastError(VPAID_ERROR, message);
+          }
+        }));
+      };
+    };
+    const script = iframeDoc.createElement("script");
+    script.src = media.fileURL || "";
+    script.onload = handleVastError(() => {
+      var _a, _b;
+      logger.debug("VPAID script has loaded...");
+      const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
+      if (!adunit) {
+        throw new Error("no VPAID adunit found");
+      }
+      logger.debug("Subscribing to VPAID adunit events");
+      const wrapper = new VPAIDWrapper(adunit, tracker);
+      wrapper.registerCallbacks();
+      logger.debug("Initializing VPAID adunit...");
+      adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
+        slot: iframeDoc.body,
+        videoSlot: player.el().querySelector("video"),
+        videoSlotCanAutoPlay: !!player.autoplay()
+      });
     });
-  });
-  iframeDoc.head.appendChild(script);
+    iframeDoc.head.appendChild(script);
+  };
+  player.el().appendChild(iframe);
 }
 var VPAIDWrapper = class {
   constructor(adunit, tracker) {
@@ -1594,7 +1598,7 @@ function register(vjs = import_video.default) {
               case "vpaid.doubleverify.com": {
                 subParameters = JSON.parse(adParameters);
                 subDocument = subParameters.adParameters;
-                if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
+                if (subParameters.mediaFiles) {
                   const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
@@ -1612,19 +1616,29 @@ function register(vjs = import_video.default) {
                 break;
               }
               case "static.cwmflk.com":
-                subParameters = {
-                  adParameters: decodeURIComponent(JSON.parse(adParameters).adParameters),
-                  mediaFiles: []
-                };
+                subParameters = JSON.parse(adParameters);
                 try {
                   do {
-                    subParameters = JSON.parse(subParameters.adParameters);
+                    subParameters = JSON.parse(decodeURIComponent(subParameters.adParameters));
                     subDocument = subParameters.adParameters;
                   } while (typeof subParameters !== "string");
                 } catch (_) {
                 }
-                display = yield this.imaDocumentToMedia(subDocument, props);
-                hasNestedVast = true;
+                if (subParameters.mediaFiles) {
+                  const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
+                    mimeType: file.type,
+                    fileURL: file.url,
+                    deliveryType: "progressive",
+                    minBitrate: file.minBitrate || 0,
+                    maxBitrate: file.maxBitrate || 16
+                  })));
+                  if (media) {
+                    display.media = media;
+                  }
+                } else if (subDocument) {
+                  display = yield this.imaDocumentToMedia(subDocument, props);
+                  hasNestedVast = true;
+                }
                 break;
               case "static.adsafeprotected.com":
                 try {
@@ -1635,7 +1649,7 @@ function register(vjs = import_video.default) {
                   } while (typeof subParameters !== "string");
                 } catch (_) {
                 }
-                if (subParameters.mediaFiles && subParameters.mediaFiles.length > 1) {
+                if (subParameters.mediaFiles) {
                   const media = this.selectMedia(subParameters.mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
                     mimeType: file.type,
                     deliveryType: file.delivery,
@@ -1668,6 +1682,9 @@ function register(vjs = import_video.default) {
                 break;
               }
               case "origin.acuityplatform.com": {
+                if (!adParameters) {
+                  break;
+                }
                 const acpParams = JSON.parse(adParameters);
                 response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
                   options: __spreadProps(__spreadValues({}, this.options), {
