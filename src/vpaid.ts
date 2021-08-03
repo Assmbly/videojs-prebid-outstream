@@ -24,16 +24,6 @@ export function displayVPAID({
     logger.debug('Displaying VPAID...');
     player.trigger('adVPAIDSelected');
 
-    const iframe = document.createElement('iframe');
-    iframe.id = `${creative.id}_${Date.now()}`;
-    iframe.className = 'vjs-pop-vpaid-container';
-    player.el().appendChild(iframe);
-
-    const iframeDoc = iframe.contentDocument;
-    if (!iframeDoc) {
-        throw new Error('unable to write iframe');
-    }
-
     // Failsafe to check if VPAID loaded and video played
     const startVPAIDTimeout = setTimeout(() => {
         handleError(async () => {
@@ -53,52 +43,66 @@ export function displayVPAID({
         clearTimeout(startVPAIDTimeout);
     });
 
-    const handleVastError = (main: () => void) => {
-        return () => {
+    const iframe = document.createElement('iframe');
+    iframe.id = `${creative.id}_${Date.now()}`;
+    iframe.className = 'vjs-pop-vpaid-container';
+    iframe.onload = () => {
+        const iframeDoc = iframe.contentDocument;
+        if (!iframeDoc) {
             handleError(async () => {
-                try {
-                    main();
-                } catch (e) {
-                    // Prevent stacking errors
-                    clearTimeout(startVPAIDTimeout);
-
-                    const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
-                    throw new VastError(VPAID_ERROR, message);
-                }
+                throw new Error('unable to write iframe');
             });
-        };
-    };
-
-    const script = iframeDoc.createElement('script');
-
-    script.src = media.fileURL || '';
-    script.onload = handleVastError(() => {
-        logger.debug('VPAID script has loaded...');
-        const adunit = iframe.contentWindow?.getVPAIDAd?.();
-        if (!adunit) {
-            throw new Error('no VPAID adunit found');
         }
 
-        logger.debug('Subscribing to VPAID adunit events');
-        const wrapper = new VPAIDWrapper(adunit, tracker);
-        wrapper.registerCallbacks();
+        const handleVastError = (main: () => void) => {
+            return () => {
+                handleError(async () => {
+                    try {
+                        main();
+                    } catch (e) {
+                        // Prevent stacking errors
+                        clearTimeout(startVPAIDTimeout);
 
-        logger.debug('Initializing VPAID adunit...');
-        adunit.initAd(
-            player.width(),
-            player.height(),
-            VIEW_MODE.NORMAL,
-            media.bitrate,
-            { AdParameters: creative.adParameters || '' },
-            {
-                slot: iframeDoc.body,
-                videoSlot: player.el().querySelector('video') as HTMLVideoElement,
-                videoSlotCanAutoPlay: !!player.autoplay(),
+                        const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
+                        throw new VastError(VPAID_ERROR, message);
+                    }
+                });
+            };
+        };
+
+        const script = iframeDoc!.createElement('script');
+
+        script.src = media.fileURL || '';
+        script.onload = handleVastError(() => {
+            logger.debug('VPAID script has loaded...');
+            const adunit = iframe.contentWindow?.getVPAIDAd?.();
+            if (!adunit) {
+                throw new Error('no VPAID adunit found');
             }
-        );
-    });
 
-    iframeDoc.head.appendChild(script);
+            logger.debug('Subscribing to VPAID adunit events');
+            const wrapper = new VPAIDWrapper(adunit, tracker);
+            wrapper.registerCallbacks();
+
+            logger.debug('Initializing VPAID adunit...');
+            adunit.initAd(
+                player.width(),
+                player.height(),
+                VIEW_MODE.NORMAL,
+                media.bitrate,
+                { AdParameters: creative.adParameters || '' },
+                {
+                    slot: iframeDoc!.body,
+                    videoSlot: player.el().querySelector('video') as HTMLVideoElement,
+                    videoSlotCanAutoPlay: !!player.autoplay(),
+                }
+            );
+        });
+
+        iframeDoc!.head.appendChild(script);
+    };
+
+    player.el().appendChild(iframe);
 }
 
 class VPAIDWrapper {
