@@ -89,7 +89,7 @@ export default function register(vjs: typeof videojs = videojs) {
             };
 
             this.logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
-            this.logger.debug('staring pop plugin...');
+            this.logger.debug('Starting pop plugin...');
             this.handleError(this.setup);
         }
 
@@ -223,6 +223,7 @@ export default function register(vjs: typeof videojs = videojs) {
 
             if (isPlayerVisible && !document.hidden && this.player.paused()) {
                 // TODO Silence "uncaught play promise" error messages
+                // TODO only autoplay if src is not original
                 this.player.play();
             }
 
