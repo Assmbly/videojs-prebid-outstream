@@ -1250,43 +1250,55 @@ function displayVPAID({
         throw new Error("unable to write iframe");
       }));
     }
-    const handleVastError = (main) => {
-      return () => {
-        handleError(() => __async(this, null, function* () {
-          try {
-            main();
-          } catch (e) {
-            clearTimeout(startVPAIDTimeout);
-            const message = typeof e === "string" ? e : e.message;
-            throw new VastError(VPAID_ERROR, message);
-          }
-        }));
-      };
+    const handleVPAIDError = (main) => {
+      handleError(() => __async(this, null, function* () {
+        try {
+          main();
+        } catch (e) {
+          clearTimeout(startVPAIDTimeout);
+          const message = typeof e === "string" ? e : e.message;
+          throw new VastError(VPAID_ERROR, message);
+        }
+      }));
     };
     const script = iframeDoc.createElement("script");
     script.src = media.fileURL || "";
-    script.onload = handleVastError(() => {
-      var _a, _b;
-      logger.debug("VPAID script has loaded...");
-      const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
-      if (!adunit) {
-        throw new Error("no VPAID adunit found");
-      }
-      logger.debug("Subscribing to VPAID adunit events");
-      subscribeToCallbacks(adunit, tracker, logger);
-      logger.debug("Initializing VPAID adunit...");
-      adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
-        slot: iframeDoc.body,
-        videoSlot: player.el().querySelector("video"),
-        videoSlotCanAutoPlay: !!player.autoplay()
+    script.onload = () => {
+      handleVPAIDError(() => {
+        var _a, _b;
+        logger.debug("VPAID script has loaded...");
+        const adunit = (_b = (_a = iframe.contentWindow) == null ? void 0 : _a.getVPAIDAd) == null ? void 0 : _b.call(_a);
+        if (!adunit) {
+          throw new Error("no VPAID adunit found");
+        }
+        logger.debug("Subscribing to VPAID adunit events");
+        subscribeToCallbacks(adunit, tracker, logger, handleVPAIDError);
+        logger.debug("Initializing VPAID adunit...", adunit);
+        adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
+          slot: iframeDoc.body,
+          videoSlot: player.el().querySelector("video"),
+          videoSlotCanAutoPlay: !!player.autoplay()
+        });
+        tracker.on("complete", () => {
+          logger.debug("Sending VPAID complete...");
+          adunit.stopAd();
+        });
+        tracker.on("skip", () => {
+          logger.debug("Sending VPAID skip...");
+          if (typeof adunit.skipAd === "function") {
+            adunit.skipAd();
+          } else {
+            adunit.stopAd();
+          }
+        });
       });
-    });
+    };
     iframeDoc.head.appendChild(script);
     iframeDoc.body.style.margin = "0";
   };
   player.el().appendChild(iframe);
 }
-function subscribeToCallbacks(adunit, tracker, logger) {
+function subscribeToCallbacks(adunit, tracker, logger, handleError) {
   const dummy = () => {
   };
   const callbacks = {
@@ -1334,8 +1346,14 @@ function subscribeToCallbacks(adunit, tracker, logger) {
     AdUserClose: dummy,
     AdPaused: dummy,
     AdPlaying: dummy,
-    AdError: dummy,
-    AdLog: dummy
+    AdError: (message) => {
+      handleError(() => {
+        throw new Error(message);
+      });
+    },
+    AdLog: (message) => {
+      logger.debug("VPAID Ad Log: ", message);
+    }
   };
   Object.keys(callbacks).forEach((name) => {
     const eventName = name;
@@ -1626,7 +1644,7 @@ function register(vjs = import_video.default) {
         maxVPAIDAdStart: 5e3
       }), options), { adControls });
       this.logger = getLogger(`prebid-outstream: ${this.player.id()}:`, this.options.debug);
-      this.logger.debug("staring pop plugin...");
+      this.logger.debug("Starting pop plugin...");
       this.handleError(this.setup);
     }
     isLinearCreative(creative) {

@@ -14,6 +14,8 @@ interface VPAIDProps extends BaseWithCreativeAndTracker {
     handleError: PrebidOutStreamPlugin.Instance['handleError'];
 }
 
+type VPAIDErrorHandler = (main: () => void) => void;
+
 export function displayVPAID({
     player,
     logger,
@@ -58,49 +60,63 @@ export function displayVPAID({
             });
         }
 
-        const handleVastError = (main: () => void) => {
-            return () => {
-                handleError(async () => {
-                    try {
-                        main();
-                    } catch (e) {
-                        // Prevent stacking errors
-                        clearTimeout(startVPAIDTimeout);
+        const handleVPAIDError: VPAIDErrorHandler = (main) => {
+            handleError(async () => {
+                try {
+                    main();
+                } catch (e) {
+                    // Prevent stacking errors
+                    clearTimeout(startVPAIDTimeout);
 
-                        const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
-                        throw new VastError(VPAID_ERROR, message);
-                    }
-                });
-            };
+                    const message = typeof e === 'string' ? e : (e as ErrorEvent).message;
+                    throw new VastError(VPAID_ERROR, message);
+                }
+            });
         };
 
         const script = iframeDoc!.createElement('script');
 
         script.src = media.fileURL || '';
-        script.onload = handleVastError(() => {
-            logger.debug('VPAID script has loaded...');
-            const adunit = iframe.contentWindow?.getVPAIDAd?.();
-            if (!adunit) {
-                throw new Error('no VPAID adunit found');
-            }
-
-            logger.debug('Subscribing to VPAID adunit events');
-            subscribeToCallbacks(adunit, tracker, logger);
-
-            logger.debug('Initializing VPAID adunit...');
-            adunit.initAd(
-                player.width(),
-                player.height(),
-                VIEW_MODE.NORMAL,
-                media.bitrate,
-                { AdParameters: creative.adParameters || '' },
-                {
-                    slot: iframeDoc!.body,
-                    videoSlot: player.el().querySelector('video') as HTMLVideoElement,
-                    videoSlotCanAutoPlay: !!player.autoplay(),
+        script.onload = () => {
+            handleVPAIDError(() => {
+                logger.debug('VPAID script has loaded...');
+                const adunit = iframe.contentWindow?.getVPAIDAd?.();
+                if (!adunit) {
+                    throw new Error('no VPAID adunit found');
                 }
-            );
-        });
+
+                logger.debug('Subscribing to VPAID adunit events');
+                subscribeToCallbacks(adunit, tracker, logger, handleVPAIDError);
+
+                logger.debug('Initializing VPAID adunit...', adunit);
+                adunit.initAd(
+                    player.width(),
+                    player.height(),
+                    VIEW_MODE.NORMAL,
+                    media.bitrate,
+                    { AdParameters: creative.adParameters || '' },
+                    {
+                        slot: iframeDoc!.body,
+                        videoSlot: player.el().querySelector('video') as HTMLVideoElement,
+                        videoSlotCanAutoPlay: !!player.autoplay(),
+                    }
+                );
+
+                tracker.on('complete', () => {
+                    logger.debug('Sending VPAID complete...');
+                    adunit.stopAd();
+                });
+
+                tracker.on('skip', () => {
+                    logger.debug('Sending VPAID skip...');
+                    if (typeof adunit.skipAd === 'function') {
+                        adunit.skipAd();
+                    } else {
+                        adunit.stopAd();
+                    }
+                });
+            });
+        };
 
         iframeDoc!.head.appendChild(script);
         iframeDoc!.body.style.margin = '0';
@@ -109,7 +125,12 @@ export function displayVPAID({
     player.el().appendChild(iframe);
 }
 
-function subscribeToCallbacks(adunit: iab.vpaid.VpaidCreative, tracker: VASTTracker, logger: ILogger) {
+function subscribeToCallbacks(
+    adunit: iab.vpaid.VpaidCreative,
+    tracker: VASTTracker,
+    logger: ILogger,
+    handleError: VPAIDErrorHandler
+) {
     const dummy = () => {
         // Dummy method to squelch errors from callbacks not found
         // See https://github.com/redbrickmedia/videojs-prebid-outstream/pull/16
@@ -176,8 +197,14 @@ function subscribeToCallbacks(adunit: iab.vpaid.VpaidCreative, tracker: VASTTrac
         AdUserClose: dummy,
         AdPaused: dummy,
         AdPlaying: dummy,
-        AdError: dummy,
-        AdLog: dummy,
+        AdError: (message: string) => {
+            handleError(() => {
+                throw new Error(message);
+            });
+        },
+        AdLog: (message: string) => {
+            logger.debug('VPAID Ad Log: ', message);
+        },
     };
 
     Object.keys(callbacks).forEach((name) => {
