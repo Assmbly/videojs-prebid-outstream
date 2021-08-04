@@ -1273,8 +1273,7 @@ function displayVPAID({
         throw new Error("no VPAID adunit found");
       }
       logger.debug("Subscribing to VPAID adunit events");
-      const wrapper = new VPAIDWrapper(adunit, tracker);
-      wrapper.registerCallbacks();
+      subscribeToCallbacks(adunit, tracker, logger);
       logger.debug("Initializing VPAID adunit...");
       adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
         slot: iframeDoc.body,
@@ -1283,69 +1282,66 @@ function displayVPAID({
       });
     });
     iframeDoc.head.appendChild(script);
+    iframeDoc.body.style.margin = "0";
   };
   player.el().appendChild(iframe);
 }
-var VPAIDWrapper = class {
-  constructor(adunit, tracker) {
-    this.adunit = adunit;
-    this.tracker = tracker;
-    __publicField(this, "callbacks");
-    __publicField(this, "onAdClickThru", (url, _id, playerHandles) => {
+function subscribeToCallbacks(adunit, tracker, logger) {
+  const dummy = () => {
+  };
+  const callbacks = {
+    AdStarted: dummy,
+    AdStopped: dummy,
+    AdSkipped: dummy,
+    AdLoaded: () => {
+      logger.debug("VPAID adunit loaded...");
+      if (typeof adunit.startAd === "function") {
+        logger.debug("Starting VPAID adunit...");
+        adunit.startAd();
+      }
+    },
+    AdLinearChange: dummy,
+    AdSizeChange: dummy,
+    AdExpandedChange: dummy,
+    AdSkippableStateChange: dummy,
+    AdDurationChange: dummy,
+    AdRemainingTimeChange: dummy,
+    AdVolumeChange: dummy,
+    AdImpression: dummy,
+    AdClickThru: (url, _id, playerHandles) => {
       if (!playerHandles) {
-        this.tracker.click();
+        tracker.click();
         return;
       }
       if (!url) {
-        this.tracker.on("clickthrough", (mUrl) => {
+        tracker.on("clickthrough", (mUrl) => {
           window.open(mUrl, "_blank");
         });
       }
-      this.tracker.click();
+      tracker.click();
       if (url) {
         window.open(url, "_blank");
       }
-    });
-    __publicField(this, "dummy", () => {
-    });
-    this.callbacks = {
-      AdStarted: this.dummy,
-      AdStopped: this.dummy,
-      AdSkipped: this.dummy,
-      AdLoaded: this.dummy,
-      AdLinearChange: this.dummy,
-      AdSizeChange: this.dummy,
-      AdExpandedChange: this.dummy,
-      AdSkippableStateChange: this.dummy,
-      AdDurationChange: this.dummy,
-      AdRemainingTimeChange: this.dummy,
-      AdVolumeChange: this.dummy,
-      AdImpression: this.dummy,
-      AdClickThru: this.onAdClickThru,
-      AdInteraction: this.dummy,
-      AdVideoStart: this.dummy,
-      AdVideoFirstQuartile: this.dummy,
-      AdVideoMidpoint: this.dummy,
-      AdVideoThirdQuartile: this.dummy,
-      AdVideoComplete: this.dummy,
-      AdUserAcceptInvitation: this.dummy,
-      AdUserMinimize: this.dummy,
-      AdUserClose: this.dummy,
-      AdPaused: this.dummy,
-      AdPlaying: this.dummy,
-      AdError: this.dummy,
-      AdLog: this.dummy
-    };
-  }
-  registerCallbacks() {
-    if (typeof this.adunit.subscribe === "function") {
-      Object.keys(this.callbacks).forEach((name) => {
-        const eventName = name;
-        this.adunit.subscribe(this.callbacks[eventName], eventName);
-      });
-    }
-  }
-};
+    },
+    AdInteraction: dummy,
+    AdVideoStart: dummy,
+    AdVideoFirstQuartile: dummy,
+    AdVideoMidpoint: dummy,
+    AdVideoThirdQuartile: dummy,
+    AdVideoComplete: dummy,
+    AdUserAcceptInvitation: dummy,
+    AdUserMinimize: dummy,
+    AdUserClose: dummy,
+    AdPaused: dummy,
+    AdPlaying: dummy,
+    AdError: dummy,
+    AdLog: dummy
+  };
+  Object.keys(callbacks).forEach((name) => {
+    const eventName = name;
+    adunit.subscribe(callbacks[eventName], eventName);
+  });
+}
 
 // src/vast.ts
 var import_vast_client = __toModule(require_vast_client_min());
@@ -1525,213 +1521,16 @@ function register(vjs = import_video.default) {
         }
       }));
       __publicField(this, "setup", () => __async(this, null, function* () {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+        var _a;
         this.logger.debug("Initialize plugin with options", this.options);
         const props = { player: this.player, options: this.options, logger: this.logger };
-        let response = yield parseVAST(props);
+        const response = yield parseVAST(props);
         let display = {};
         this.logger.debug("Vast parsed: ", response);
         const originalSourceOrder = this.player.options_.sourceOrder;
         this.player.options({ sourceOrder: true });
         try {
           display = this.getDisplayMedia(response);
-          let adParameters = "";
-          let hasNestedVast = false;
-          do {
-            let subDocument = "";
-            let subParameters = { adParameters: "", mediaFiles: [] };
-            let mediaFiles = [];
-            hasNestedVast = false;
-            adParameters = display.creative.adParameters || "";
-            const mediaUrl = ((_a = display.media) == null ? void 0 : _a.fileURL) ? new URL(display.media.fileURL) : { hostname: "" };
-            this.logger.debug("parsing vast for host", mediaUrl.hostname, adParameters);
-            switch (mediaUrl.hostname) {
-              case "acdn.adnxs-simple.com": {
-                let adXml = "";
-                const meta = JSON.parse(adParameters);
-                const vastTagUri = meta.vastAdTagURI;
-                if (!vastTagUri) {
-                  const encoded = (_d = (_c = (_b = meta.ads) == null ? void 0 : _b[0]) == null ? void 0 : _c.rtb) == null ? void 0 : _d.content_b64;
-                  if (encoded) {
-                    adXml = atob(encoded.replaceAll("-", "+").replaceAll("_", "/").replaceAll(".", "="));
-                  }
-                }
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), { adXml, adTagUrl: vastTagUri })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              }
-              case "acds.prod.vidible.tv":
-                try {
-                  adParameters = decodeURIComponent(adParameters).slice(6).replaceAll('"', '"').replaceAll("\n", "").replaceAll("	", "").replaceAll("+", " ");
-                } catch (_) {
-                }
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), { adXml: adParameters, adTagUrl: "" })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              case "s.yimg.com": {
-                const yParameters = JSON.parse(adParameters);
-                mediaFiles = ((_e = yParameters.mediaFiles) == null ? void 0 : _e.filter((file) => file.value !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
-                if (mediaFiles.length > 0) {
-                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
-                    mimeType: file.type,
-                    deliveryType: file.delivery,
-                    fileURL: file.value,
-                    minBitrate: file.minBitrate || 0,
-                    maxBitrate: file.maxBitrate || 16
-                  })));
-                  if (media) {
-                    display.media = media;
-                  }
-                } else if (yParameters.vastAdTagURI) {
-                  response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                    options: __spreadProps(__spreadValues({}, this.options), {
-                      adXml: adParameters,
-                      adTagUrl: yParameters.vastAdTagURI
-                    })
-                  }));
-                  display = this.getDisplayMedia(response);
-                  hasNestedVast = true;
-                }
-                break;
-              }
-              case "vpaid.doubleverify.com": {
-                subParameters = JSON.parse(adParameters);
-                subDocument = subParameters.adParameters;
-                mediaFiles = ((_f = subParameters.mediaFiles) == null ? void 0 : _f.filter((file) => file.uri !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
-                if (mediaFiles.length > 0) {
-                  this.logger.debug("mediafile", mediaFiles);
-                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
-                    mimeType: file.type,
-                    deliveryType: file.delivery,
-                    fileURL: file.uri,
-                    minBitrate: file.minBitrate || 0,
-                    maxBitrate: file.maxBitrate || 16
-                  })));
-                  if (media) {
-                    display.media = media;
-                  }
-                } else if (subDocument) {
-                  display = yield this.imaDocumentToMedia(subDocument, props);
-                  hasNestedVast = true;
-                }
-                break;
-              }
-              case "static.cwmflk.com":
-                subParameters = JSON.parse(adParameters);
-                try {
-                  do {
-                    subParameters = JSON.parse(decodeURIComponent(subParameters.adParameters));
-                    subDocument = subParameters.adParameters;
-                  } while (typeof subParameters !== "string");
-                } catch (_) {
-                }
-                mediaFiles = ((_g = subParameters.mediaFiles) == null ? void 0 : _g.filter((file) => file.url !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
-                if (mediaFiles.length > 0) {
-                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
-                    mimeType: file.type,
-                    fileURL: file.url,
-                    deliveryType: "progressive",
-                    minBitrate: file.minBitrate || 0,
-                    maxBitrate: file.maxBitrate || 16
-                  })));
-                  if (media) {
-                    display.media = media;
-                  }
-                } else if (subDocument) {
-                  display = yield this.imaDocumentToMedia(subDocument, props);
-                  hasNestedVast = true;
-                }
-                break;
-              case "static.adsafeprotected.com":
-                try {
-                  subParameters = { adParameters, mediaFiles: [] };
-                  do {
-                    subParameters = JSON.parse(subParameters.adParameters);
-                    subDocument = subParameters.adParameters;
-                  } while (typeof subParameters !== "string");
-                } catch (_) {
-                }
-                mediaFiles = ((_h = subParameters.mediaFiles) == null ? void 0 : _h.filter((file) => file.uri !== "https://imasdk.googleapis.com/js/sdkloader/vpaid_adapter.js")) || [];
-                if (mediaFiles.length > 0) {
-                  const media = this.selectMedia(mediaFiles.map((file) => __spreadProps(__spreadValues({}, file), {
-                    mimeType: file.type,
-                    deliveryType: file.delivery,
-                    fileURL: file.uri,
-                    minBitrate: file.minBitrate || 0,
-                    maxBitrate: file.maxBitrate || 16
-                  })));
-                  if (media) {
-                    display.media = media;
-                  }
-                } else if (subDocument) {
-                  display = yield this.imaDocumentToMedia(subDocument, props);
-                  hasNestedVast = true;
-                }
-                break;
-              case "imasdk.googleapis.com":
-                display = yield this.imaDocumentToMedia(adParameters, props);
-                hasNestedVast = true;
-                break;
-              case "svastx.moatads.com": {
-                const vastTagURL = new URL(display.media.fileURL.replace("#", "?"));
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), {
-                    adXml: "",
-                    adTagUrl: vastTagURL.searchParams.get("vast") || ""
-                  })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              }
-              case "origin.acuityplatform.com": {
-                if (!adParameters) {
-                  break;
-                }
-                const acpParams = JSON.parse(adParameters);
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), {
-                    adXml: "",
-                    adTagUrl: ((_i = acpParams == null ? void 0 : acpParams.Ad_Context) == null ? void 0 : _i.MediaSrc) || ""
-                  })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              }
-              case "vpaid.pubmatic.com": {
-                const adXml = decodeURIComponent(adParameters);
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), {
-                    adXml,
-                    adTagUrl: ""
-                  })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              }
-              case "js.brealtime.com": {
-                const brealParams = JSON.parse(adParameters);
-                const adXml = decodeURIComponent((_j = brealParams.ad) == null ? void 0 : _j.tag);
-                response = yield parseVAST(__spreadProps(__spreadValues({}, props), {
-                  options: __spreadProps(__spreadValues({}, this.options), {
-                    adXml,
-                    adTagUrl: ""
-                  })
-                }));
-                display = this.getDisplayMedia(response);
-                hasNestedVast = true;
-                break;
-              }
-            }
-          } while (hasNestedVast);
         } finally {
           this.player.options({ sourceOrder: originalSourceOrder });
         }
@@ -1744,11 +1543,11 @@ function register(vjs = import_video.default) {
         this.logger.debug("Setting up tracker...");
         this.tracker = createTracker(propsWithCreative);
         Object.keys(this.options.adControls).forEach((key) => {
-          var _a2, _b2;
+          var _a2, _b;
           if (this.options.adControls[key]) {
             (_a2 = this.player.controlBar.getChild(key)) == null ? void 0 : _a2.show();
           } else {
-            (_b2 = this.player.controlBar.getChild(key)) == null ? void 0 : _b2.hide();
+            (_b = this.player.controlBar.getChild(key)) == null ? void 0 : _b.hide();
           }
         });
         if (display.creative.apiFramework === "VPAID" || display.media.apiFramework === "VPAID") {
@@ -1765,7 +1564,7 @@ function register(vjs = import_video.default) {
             }
           }));
         }
-        if ((_k = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _k.url) {
+        if ((_a = display.creative.videoClickThroughURLTemplate) == null ? void 0 : _a.url) {
           ["mouseup", "touchend"].forEach((eventName) => {
             this.player.el().addEventListener(eventName, (e) => {
               const elem = e.target;
