@@ -2,6 +2,7 @@ import { VASTTracker } from 'vast-client';
 
 import { BaseWithCreativeAndTracker } from './index';
 import VastError, { VPAID_ERROR } from './errors';
+import { ILogger } from './logger';
 
 const VIEW_MODE: Record<string, iab.vpaid.ViewMode> = {
     NORMAL: 'normal',
@@ -84,7 +85,7 @@ export function displayVPAID({
             }
 
             logger.debug('Subscribing to VPAID adunit events');
-            const wrapper = new VPAIDWrapper(adunit, tracker);
+            const wrapper = new VPAIDWrapper(adunit, tracker, logger);
             wrapper.registerCallbacks();
 
             logger.debug('Initializing VPAID adunit...');
@@ -103,6 +104,7 @@ export function displayVPAID({
         });
 
         iframeDoc!.head.appendChild(script);
+        iframeDoc!.body.style.margin = '0';
     };
 
     player.el().appendChild(iframe);
@@ -111,12 +113,19 @@ export function displayVPAID({
 class VPAIDWrapper {
     private callbacks: iab.vpaid.EventsMap;
 
-    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker) {
+    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker, readonly logger: ILogger) {
         this.callbacks = {
             AdStarted: this.dummy,
             AdStopped: this.dummy,
             AdSkipped: this.dummy,
-            AdLoaded: this.dummy,
+            AdLoaded: () => {
+                logger.debug('VPAID adunit loaded...');
+                // TODO only start vpaid ad unit when in view
+                if (typeof adunit.startAd === 'function') {
+                    logger.debug('Starting VPAID adunit...');
+                    adunit.startAd();
+                }
+            },
             AdLinearChange: this.dummy,
             AdSizeChange: this.dummy,
             AdExpandedChange: this.dummy,
