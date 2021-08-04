@@ -85,8 +85,7 @@ export function displayVPAID({
             }
 
             logger.debug('Subscribing to VPAID adunit events');
-            const wrapper = new VPAIDWrapper(adunit, tracker, logger);
-            wrapper.registerCallbacks();
+            subscribeToCallbacks(adunit, tracker, logger);
 
             logger.debug('Initializing VPAID adunit...');
             adunit.initAd(
@@ -110,87 +109,79 @@ export function displayVPAID({
     player.el().appendChild(iframe);
 }
 
-class VPAIDWrapper {
-    private callbacks: iab.vpaid.EventsMap;
-
-    constructor(readonly adunit: iab.vpaid.VpaidCreative, readonly tracker: VASTTracker, readonly logger: ILogger) {
-        this.callbacks = {
-            AdStarted: this.dummy,
-            AdStopped: this.dummy,
-            AdSkipped: this.dummy,
-            AdLoaded: () => {
-                logger.debug('VPAID adunit loaded...');
-                // TODO only start vpaid ad unit when in view
-                if (typeof adunit.startAd === 'function') {
-                    logger.debug('Starting VPAID adunit...');
-                    adunit.startAd();
-                }
-            },
-            AdLinearChange: this.dummy,
-            AdSizeChange: this.dummy,
-            AdExpandedChange: this.dummy,
-            AdSkippableStateChange: this.dummy,
-            AdDurationChange: this.dummy,
-            AdRemainingTimeChange: this.dummy,
-            AdVolumeChange: this.dummy,
-            AdImpression: this.dummy,
-            AdClickThru: this.onAdClickThru,
-            AdInteraction: this.dummy,
-            AdVideoStart: this.dummy,
-            AdVideoFirstQuartile: this.dummy,
-            AdVideoMidpoint: this.dummy,
-            AdVideoThirdQuartile: this.dummy,
-            AdVideoComplete: this.dummy,
-            AdUserAcceptInvitation: this.dummy,
-            AdUserMinimize: this.dummy,
-            AdUserClose: this.dummy,
-            AdPaused: this.dummy,
-            AdPlaying: this.dummy,
-            AdError: this.dummy,
-            AdLog: this.dummy,
-        };
-    }
-
-    registerCallbacks() {
-        if (typeof this.adunit.subscribe === 'function') {
-            // Subscribe to callbacks
-            Object.keys(this.callbacks).forEach((name) => {
-                const eventName = name as iab.vpaid.EventsNames;
-                this.adunit.subscribe(this.callbacks[eventName], eventName);
-            });
-        }
-    }
-
-    onAdClickThru = (url: string, _id: string, playerHandles: boolean) => {
-        // The creative should provide click through handling
-        // However, the player must still send the tracking to the VAST
-        // ClickTracking and VideoClicks elements
-        if (!playerHandles) {
-            this.tracker.click();
-            return;
-        }
-
-        // Player is handling the clickthrough now
-        // If url is NOT defined, then
-        // video player must use the VAST element VideoClicks/ClickThrough
-        if (!url) {
-            this.tracker.on('clickthrough', (mUrl) => {
-                window.open(mUrl, '_blank');
-            });
-        }
-
-        // Handler should be defined before click is sent through for tracking
-        this.tracker.click();
-
-        // URL is optional, if it is defined then the player should open
-        // the URL
-        if (url) {
-            window.open(url, '_blank');
-        }
-    };
-
-    dummy = () => {
+function subscribeToCallbacks(adunit: iab.vpaid.VpaidCreative, tracker: VASTTracker, logger: ILogger) {
+    const dummy = () => {
         // Dummy method to squelch errors from callbacks not found
         // See https://github.com/redbrickmedia/videojs-prebid-outstream/pull/16
     };
+
+    const callbacks: iab.vpaid.EventsMap = {
+        AdStarted: dummy,
+        AdStopped: dummy,
+        AdSkipped: dummy,
+        AdLoaded: () => {
+            logger.debug('VPAID adunit loaded...');
+            // TODO only start vpaid ad unit when in view
+
+            // Check if start ad is a method, not all vpaid units
+            // require start ad to be called, as init ad will start the ad
+            if (typeof adunit.startAd === 'function') {
+                logger.debug('Starting VPAID adunit...');
+                adunit.startAd();
+            }
+        },
+        AdLinearChange: dummy,
+        AdSizeChange: dummy,
+        AdExpandedChange: dummy,
+        AdSkippableStateChange: dummy,
+        AdDurationChange: dummy,
+        AdRemainingTimeChange: dummy,
+        AdVolumeChange: dummy,
+        AdImpression: dummy,
+        AdClickThru: (url: string, _id: string, playerHandles: boolean) => {
+            // The creative should provide click through handling
+            // However, the player must still send the tracking to the VAST
+            // ClickTracking and VideoClicks elements
+            if (!playerHandles) {
+                tracker.click();
+                return;
+            }
+
+            // Player is handling the clickthrough now
+            // If url is NOT defined, then
+            // video player must use the VAST element VideoClicks/ClickThrough
+            if (!url) {
+                tracker.on('clickthrough', (mUrl) => {
+                    window.open(mUrl, '_blank');
+                });
+            }
+
+            // Handler should be defined before click is sent through for tracking
+            tracker.click();
+
+            // URL is optional, if it is defined then the player should open
+            // the URL
+            if (url) {
+                window.open(url, '_blank');
+            }
+        },
+        AdInteraction: dummy,
+        AdVideoStart: dummy,
+        AdVideoFirstQuartile: dummy,
+        AdVideoMidpoint: dummy,
+        AdVideoThirdQuartile: dummy,
+        AdVideoComplete: dummy,
+        AdUserAcceptInvitation: dummy,
+        AdUserMinimize: dummy,
+        AdUserClose: dummy,
+        AdPaused: dummy,
+        AdPlaying: dummy,
+        AdError: dummy,
+        AdLog: dummy,
+    };
+
+    Object.keys(callbacks).forEach((name) => {
+        const eventName = name as iab.vpaid.EventsNames;
+        adunit.subscribe(callbacks[eventName], eventName);
+    });
 }

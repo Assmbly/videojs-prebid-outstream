@@ -1273,8 +1273,7 @@ function displayVPAID({
         throw new Error("no VPAID adunit found");
       }
       logger.debug("Subscribing to VPAID adunit events");
-      const wrapper = new VPAIDWrapper(adunit, tracker, logger);
-      wrapper.registerCallbacks();
+      subscribeToCallbacks(adunit, tracker, logger);
       logger.debug("Initializing VPAID adunit...");
       adunit.initAd(player.width(), player.height(), VIEW_MODE.NORMAL, media.bitrate, { AdParameters: creative.adParameters || "" }, {
         slot: iframeDoc.body,
@@ -1287,73 +1286,62 @@ function displayVPAID({
   };
   player.el().appendChild(iframe);
 }
-var VPAIDWrapper = class {
-  constructor(adunit, tracker, logger) {
-    this.adunit = adunit;
-    this.tracker = tracker;
-    this.logger = logger;
-    __publicField(this, "callbacks");
-    __publicField(this, "onAdClickThru", (url, _id, playerHandles) => {
+function subscribeToCallbacks(adunit, tracker, logger) {
+  const dummy = () => {
+  };
+  const callbacks = {
+    AdStarted: dummy,
+    AdStopped: dummy,
+    AdSkipped: dummy,
+    AdLoaded: () => {
+      logger.debug("VPAID adunit loaded...");
+      if (typeof adunit.startAd === "function") {
+        logger.debug("Starting VPAID adunit...");
+        adunit.startAd();
+      }
+    },
+    AdLinearChange: dummy,
+    AdSizeChange: dummy,
+    AdExpandedChange: dummy,
+    AdSkippableStateChange: dummy,
+    AdDurationChange: dummy,
+    AdRemainingTimeChange: dummy,
+    AdVolumeChange: dummy,
+    AdImpression: dummy,
+    AdClickThru: (url, _id, playerHandles) => {
       if (!playerHandles) {
-        this.tracker.click();
+        tracker.click();
         return;
       }
       if (!url) {
-        this.tracker.on("clickthrough", (mUrl) => {
+        tracker.on("clickthrough", (mUrl) => {
           window.open(mUrl, "_blank");
         });
       }
-      this.tracker.click();
+      tracker.click();
       if (url) {
         window.open(url, "_blank");
       }
-    });
-    __publicField(this, "dummy", () => {
-    });
-    this.callbacks = {
-      AdStarted: this.dummy,
-      AdStopped: this.dummy,
-      AdSkipped: this.dummy,
-      AdLoaded: () => {
-        logger.debug("VPAID adunit loaded...");
-        if (typeof adunit.startAd === "function") {
-          logger.debug("Starting VPAID adunit...");
-          adunit.startAd();
-        }
-      },
-      AdLinearChange: this.dummy,
-      AdSizeChange: this.dummy,
-      AdExpandedChange: this.dummy,
-      AdSkippableStateChange: this.dummy,
-      AdDurationChange: this.dummy,
-      AdRemainingTimeChange: this.dummy,
-      AdVolumeChange: this.dummy,
-      AdImpression: this.dummy,
-      AdClickThru: this.onAdClickThru,
-      AdInteraction: this.dummy,
-      AdVideoStart: this.dummy,
-      AdVideoFirstQuartile: this.dummy,
-      AdVideoMidpoint: this.dummy,
-      AdVideoThirdQuartile: this.dummy,
-      AdVideoComplete: this.dummy,
-      AdUserAcceptInvitation: this.dummy,
-      AdUserMinimize: this.dummy,
-      AdUserClose: this.dummy,
-      AdPaused: this.dummy,
-      AdPlaying: this.dummy,
-      AdError: this.dummy,
-      AdLog: this.dummy
-    };
-  }
-  registerCallbacks() {
-    if (typeof this.adunit.subscribe === "function") {
-      Object.keys(this.callbacks).forEach((name) => {
-        const eventName = name;
-        this.adunit.subscribe(this.callbacks[eventName], eventName);
-      });
-    }
-  }
-};
+    },
+    AdInteraction: dummy,
+    AdVideoStart: dummy,
+    AdVideoFirstQuartile: dummy,
+    AdVideoMidpoint: dummy,
+    AdVideoThirdQuartile: dummy,
+    AdVideoComplete: dummy,
+    AdUserAcceptInvitation: dummy,
+    AdUserMinimize: dummy,
+    AdUserClose: dummy,
+    AdPaused: dummy,
+    AdPlaying: dummy,
+    AdError: dummy,
+    AdLog: dummy
+  };
+  Object.keys(callbacks).forEach((name) => {
+    const eventName = name;
+    adunit.subscribe(callbacks[eventName], eventName);
+  });
+}
 
 // src/vast.ts
 var import_vast_client = __toModule(require_vast_client_min());
