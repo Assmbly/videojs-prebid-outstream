@@ -32,8 +32,11 @@ export function displayVPAID({
     if (options.maxVPAIDAdStart! >= 0) {
         startVPAIDTimeout = window.setTimeout(() => {
             handleError(async () => {
-                if (player && player.paused()) {
-                    throw new VastError(VPAID_ERROR, 'VPAID is not playing');
+                // If url differs from original url, vpaid has loaded correctly
+                // but may be paused due to user browser settings. Leave this
+                // user alone.
+                if (player && player.el().querySelector('video')?.src === tracker.beforeAdLoadSrc) {
+                    throw new VastError(VPAID_ERROR, 'VPAID is not loading');
                 }
             });
         }, options.maxVPAIDAdStart);
