@@ -33,8 +33,8 @@ export function displayVPAID({
         startVPAIDTimeout = window.setTimeout(() => {
             handleError(async () => {
                 // If url differs from original url, vpaid has loaded correctly
-                // but may be paused due to user browser settings. Leave this
-                // user alone.
+                // but may be paused due to user browser settings. Errors while
+                // playing will be caught by other errors.
                 if (player && player.el().querySelector('video')?.src === tracker.beforeAdLoadSrc) {
                     throw new VastError(VPAID_ERROR, 'VPAID is not loading');
                 }
