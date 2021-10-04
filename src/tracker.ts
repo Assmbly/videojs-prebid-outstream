@@ -3,11 +3,11 @@ import { VASTTracker } from 'vast-client';
 import { BaseWithCreative } from './index';
 
 export function createTracker({ player, logger, display: { creative, ad } }: BaseWithCreative): VASTTracker {
-    const beforeAdLoad = player.currentSrc();
     const tracker = new VASTTracker(null, ad, creative);
+    tracker.beforeAdLoadSrc = player.currentSrc();
     let canplay = false;
     player.on('canplay', () => {
-        if (beforeAdLoad === player.el().querySelector('video')?.src) {
+        if (tracker.beforeAdLoadSrc === player.el().querySelector('video')?.src) {
             // No ad media was loaded
             return;
         }
