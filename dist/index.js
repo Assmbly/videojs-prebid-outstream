@@ -1228,8 +1228,9 @@ function displayVPAID({
   if (options.maxVPAIDAdStart >= 0) {
     startVPAIDTimeout = window.setTimeout(() => {
       handleError(() => __async(this, null, function* () {
-        if (player && player.paused()) {
-          throw new VastError(VPAID_ERROR, "VPAID is not playing");
+        var _a;
+        if (player && ((_a = player.el().querySelector("video")) == null ? void 0 : _a.src) === tracker.beforeAdLoadSrc) {
+          throw new VastError(VPAID_ERROR, "VPAID is not loading");
         }
       }));
     }, options.maxVPAIDAdStart);
@@ -1450,12 +1451,12 @@ function CloseComponent({ onClick }) {
 // src/tracker.ts
 var import_vast_client2 = __toModule(require_vast_client_min());
 function createTracker({ player, logger, display: { creative, ad } }) {
-  const beforeAdLoad = player.currentSrc();
   const tracker = new import_vast_client2.VASTTracker(null, ad, creative);
+  tracker.beforeAdLoadSrc = player.currentSrc();
   let canplay = false;
   player.on("canplay", () => {
     var _a;
-    if (beforeAdLoad === ((_a = player.el().querySelector("video")) == null ? void 0 : _a.src)) {
+    if (tracker.beforeAdLoadSrc === ((_a = player.el().querySelector("video")) == null ? void 0 : _a.src)) {
       return;
     }
     canplay = true;
